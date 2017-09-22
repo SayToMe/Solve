@@ -16,7 +16,7 @@ let va n = Argument(AnyVariable(Variable(n)))
 module TestExecutionModule =
     module testUnifyParamsWithArguments =
         let test() = 
-            let u1 = ExecutionModule.unifyParamsWithArguments [vp "N"] [va "N2"] |> check "u1" (Some([sv "N2"]))
+            let u1 = ExecutionModule.unifyParamsWithArguments [vp "N"] [va "N2"] |> check "u1" (Some([sv "N"]))
             let u2 = ExecutionModule.unifyParamsWithArguments [snp 1.] [va "N"] |> check "u2" (Some([sn 1.]))
             let u3 = ExecutionModule.unifyParamsWithArguments [vp "N"] [sna 1.] |> check "u3" (Some([sn 1.]))
             let u4 = ExecutionModule.unifyParamsWithArguments [snp 1.] [sna 1.] |> check "u4" (Some([sn 1.]))
@@ -40,7 +40,7 @@ module TestExecutionModule =
         let test() = 
             let rule1 = 
                 ExecutionModule.unifyRule (Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))) [sna 1.]
-                |> check "rule1" (Some(Rule(Signature("eq1", [vp "N"]), (EqExpr(sn 1., sn 1.)))))
+                |> check "rule1" (Some(Rule(Signature("eq1", [snp 1.]), (EqExpr(sn 1., sn 1.)))))
             ()
 
     module testExecuteCalc = 
@@ -90,11 +90,11 @@ module TestExecutionModule =
     module RealTest =
         let test() =
             let eq1 = 
-                ExecutionModule.execute (Goal("eq1_both", [va "N1"; va "N2"])) (Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.)))))))
+                ExecutionModule.execute (Goal("eq1_both", [va "N"; va "Res"])) (Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.)))))))
                 |> check "and test1" [[sn 1.; sn 1.]]
             let eq2 = 
                 ExecutionModule.execute(Goal("eq", [va "N"; va "N2"])) (Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2"))))
-                |> check "eq test" [[sv "N"; sv "N2"]]
+                |> check "eq test" [[sv "N2"; sv "N2"]]
 
             let f = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), EqExpr(sv "Res", sn 2.)))
             let f1 = 

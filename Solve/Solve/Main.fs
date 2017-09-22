@@ -105,7 +105,7 @@ module ExecutionModule =
     let unifyParamsWithArguments parameters arguments =
         let prms = List.map2 (fun (Parameter(p)) (Argument(a)) ->
             match (p, a) with
-            | (AnyVariable(v1), AnyVariable(v2)) -> Some a
+            | (AnyVariable(v1), AnyVariable(v2)) -> Some p
             | (AnyVariable(v1), AnyTyped(v2)) -> Some a
             | (AnyTyped(v1), AnyVariable(v2)) -> Some p
             | (AnyTyped(v1), AnyTyped(v2)) when v1 = v2 -> Some a
@@ -176,12 +176,16 @@ module ExecutionModule =
                 | _ -> fun x -> AnyVariable x
 
         unifyParamsWithArguments parameters arguments
-        |> Option.bind (fun s -> 
-            Some(List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression (List.zip parameters s)))
+        |> Option.bind (fun unifiedArgs -> 
+            let newExpr = 
+                List.zip parameters unifiedArgs
+                |> List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression
+            (newExpr, unifiedArgs)
+            |> Some)
 
     let unifyRule (Rule(Signature(name, parameters), body)) arguments =
         unifyExpressionByParams parameters arguments body
-        |> Option.bind (fun resultBody -> Some(Rule(Signature(name, parameters), resultBody)))
+        |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
     let executeCalc =
             function
@@ -227,7 +231,8 @@ module ExecutionModule =
                     let newParameters = unifyBack (fromArgs parameters) e1 e1_ |> toArgs
 
                     match unifyExpressionByParams (parameters |> fromArgs |> toParams) newParameters e2 with
-                    | Some(e2_) -> executeExpression newParameters e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
+                    //| Some(e2_, newArgs) -> executeExpression newParameters e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
+                    | Some(e2_, newArgs) -> executeExpression (toArgs newArgs) e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
                     | None -> []
                 )
             | ResultExpression e -> [ResultExpression e]
@@ -261,23 +266,19 @@ module ExecutionModule =
                 | (AnyTyped(v1), AnyTyped(v2)) when v1 < v2 -> [LeExpr(e2, e2)]
                 | _ -> []
             | _ -> []
-
+            
+    // Idea is:
+    // Expression is unified with arguments by parameters
+    // Expression executes and all variables are resolved
+    // Expression tree should be mostly unchanged
+    // All changed variables can be caught afterwards
     let execute goal rule = 
-        // Idea is:
-        // Expression is unified with arguments by parameters
-        // Expression executes and all variables are resolved
-        // Expression tree should be mostly unchanged
-        // All changed variables can be caught afterwards
         let (Goal(name, arguments)) = goal
         match unifyRule rule arguments with
-        | Some unifiedRule -> 
-            let (Rule(Signature(ruleName, unifiedRuleArgs), expr)) = unifiedRule
-
+        | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then
-                let res = executeExpression arguments expr
-                let anyArgs = Option.get <| unifyParamsWithArguments unifiedRuleArgs arguments // unifiedRuleArgs |> List.map (fun (Parameter(x)) -> x)
-
-                res |> List.map (unifyBack anyArgs expr)
+                executeExpression (fromParams unifiedRuleArgs |> toArgs) expr
+                |> List.map (unifyBack (fromParams unifiedRuleArgs) expr)
             else
                 []
         | None -> []

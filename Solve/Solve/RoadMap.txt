@@ -5,9 +5,9 @@
 
 Check on:
 * Implementation of facts
-* Unify with variables with names different from parameters
 
 Currently support:
 * Basic rules
 * Complex rules
 * Multiple results
+* Unification with different parameter/argument variable names
