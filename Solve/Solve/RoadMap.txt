@@ -1,0 +1,13 @@
+﻿To implement:
+* Probably AST could be wrong way to resolve recursive and subcall rules
+* Maybe we should have some sort of knowledge base
+* Custom calls
+
+Check on:
+* Implementation of facts
+* Unify with variables with names different from parameters
+
+Currently support:
+* Basic rules
+* Complex rules
+* Multiple results
