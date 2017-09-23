@@ -46,7 +46,7 @@ type Expression =
     | OrExpression of Expression * Expression
     | AndExpression of Expression * Expression
     | ResultExpression of Any
-    | CallExpression of (Goal * Rule)
+    | CallExpression of Goal
     | CalcExpr of Any * Calc
     | EqExpr of Any * Any
     | GrExpr of Any * Any
@@ -126,9 +126,14 @@ module ExecutionModule =
                     match e with
                     | AnyVariable v -> ResultExpression (changeVariable v)
                     | AnyTyped v -> expression
-                //| CallExpression (Rule(Signature(n, prms1), expr1), l) -> 
-                //    expression
-                    //CallExpression (Rule(Signature(n, prms1), expr1), l) (prms1 |> List.map (fun (Parameter(p)) -> p)) expr1
+                | CallExpression (Goal(goalName, goalArgs)) -> 
+                    let newGoalArgs =
+                        List.map (fun (Argument(arg)) ->
+                            match arg with
+                            | AnyVariable(v) -> Argument(changeVariable v)
+                            | AnyTyped(_) -> Argument(arg)) goalArgs
+
+                    CallExpression (Goal(goalName, newGoalArgs))
                 | CalcExpr (v, c) ->
                     let rec unifyCalc =
                         let changeCalcTermIfVariable =
@@ -211,9 +216,8 @@ module ExecutionModule =
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
-        //| CallExpression (Rule(Signature(n, prms1), expr1), l) ->
-        //    executeExpression prms1 expr1
-        //    |> Option.bind (fun resExpr -> Some(CallExpression(Rule(Signature(n, prms1), resExpr), l)))
+        | (CallExpression(Goal(goalName1, goalArgs1)), CallExpression(Goal(goalName2, goalArgs2))) ->
+            goalArgs2 |> fromArgs // result args
         | (CalcExpr(v1, _), CalcExpr(v2, _)) -> unifyWithArgs arguments v1 v2
         | (EqExpr(v1, v2), EqExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
         | (GrExpr(v1, v2), GrExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
@@ -221,28 +225,28 @@ module ExecutionModule =
         | _ -> failwithf "failed to unify result. %O != %O" initialExpression expression
 
     // TODO: maybe we should unify each time we execute expression?
-    let rec executeExpression (parameters: Argument list) (expr: Expression) =
+    let rec executeExpression (parameters: Argument list) (expr: Expression) executeCustom =
             match expr with
             | True -> [True]
-            | NotExpression e -> List.map (NotExpression) (executeExpression parameters e)
+            | NotExpression e -> List.map (NotExpression) (executeExpression parameters e executeCustom)
             | OrExpression (e1, e2) ->
-                let first = executeExpression parameters e1 |> List.map (fun v -> OrExpression(v, NotExecuted e2))
-                let second = (executeExpression parameters e2 |> List.map (fun x -> OrExpression(NotExecuted e1, x)))
+                let first = executeExpression parameters e1 executeCustom |> List.map (fun v -> OrExpression(v, NotExecuted e2))
+                let second = (executeExpression parameters e2 executeCustom |> List.map (fun x -> OrExpression(NotExecuted e1, x)))
                 first@second
             | AndExpression (e1, e2) ->
-                executeExpression parameters e1
+                executeExpression parameters e1 executeCustom
                 |> List.collect (fun e1_ ->
                     let newParameters = unifyBack (fromArgs parameters) e1 e1_ |> toArgs
 
                     match unifyExpressionByParams (parameters |> fromArgs |> toParams) newParameters e2 with
                     //| Some(e2_, newArgs) -> executeExpression newParameters e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
-                    | Some(e2_, newArgs) -> executeExpression (toArgs newArgs) e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
+                    | Some(e2_, newArgs) -> executeExpression (toArgs newArgs) e2_ executeCustom |> List.map(fun e2__ -> AndExpression(e1_, e2__))
                     | None -> []
                 )
             | ResultExpression e -> [ResultExpression e]
-            //| CallExpression (Rule(Signature(n, prms1), expr1), l) ->
-            //    executeExpression prms1 expr1
-            //    |> Option.bind (fun resExpr -> Some(CallExpression(Rule(Signature(n, prms1), resExpr), l)))
+            | CallExpression (Goal(goalSign, goalArgs)) ->
+                executeCustom (Goal(goalSign, goalArgs))
+                |> List.map (fun resExpr -> CallExpression(Goal(goalSign, resExpr |> toArgs)))
             | CalcExpr (v, c) ->
                 match v with
                 | AnyVariable(vv) -> [CalcExpr(AnyTyped(TypedSNumber(executeCalc c)), c)]
@@ -276,12 +280,12 @@ module ExecutionModule =
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute (Goal(name, arguments)) rule =
+    let execute (Goal(name, arguments)) rule executeCustom =
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then
-                executeExpression (fromParams unifiedRuleArgs |> toArgs) expr
-                |> List.map (unifyBack (fromParams unifiedRuleArgs) expr)
+                executeExpression (fromParams unifiedRuleArgs |> toArgs) expr executeCustom
+                |> List.map (unifyBack (fromParams unifiedRuleArgs) expr) 
             else
                 []
         | None -> []
@@ -289,9 +293,9 @@ module ExecutionModule =
     let checkApply (Goal(name, arguments)) (Rule(Signature(ruleName, ruleParams), _)) =
         name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
 
-    let checkGoal goal knowledgeBase =
+    let rec checkGoal goal knowledgeBase =
         knowledgeBase
         |> List.filter (checkApply goal)
         |> List.collect (fun r ->
-            execute goal r
+            execute goal r (fun custom -> checkGoal custom knowledgeBase)
         )
