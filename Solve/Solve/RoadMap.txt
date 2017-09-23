@@ -2,6 +2,7 @@
 * Probably AST could be wrong way to resolve recursive and subcall rules
 * Maybe we should have some sort of knowledge base
 * Custom calls
+* Strings and lists
 
 Check on:
 * Implementation of facts

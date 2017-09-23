@@ -55,6 +55,7 @@
     <None Include="Script.fsx" />
     <Content Include="packages.config" />
     <Content Include="RoadMap.txt" />
+    <None Include="RealTest.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

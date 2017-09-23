@@ -40,6 +40,7 @@ module CalcModule =
 
 type Expression =
     // Used as false or not executed cut
+    | True
     | NotExecuted of Expression
     | NotExpression of Expression
     | OrExpression of Expression * Expression
@@ -117,6 +118,7 @@ module ExecutionModule =
 
     let rec unifyExpression expression changeVariable =
                 match expression with
+                | True -> True
                 | NotExpression e -> NotExpression (unifyExpression e changeVariable)
                 | OrExpression (e1, e2) -> OrExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
                 | AndExpression (e1, e2) -> AndExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
@@ -203,6 +205,7 @@ module ExecutionModule =
         let unifyWithArgs args v1 v2 = args |> List.map (fun (a) -> if a = v1 then v2 else a)
 
         match (initialExpression, expression) with
+        | (True, True) -> arguments
         | (_, NotExecuted e) -> arguments
         | (NotExpression e1, NotExpression e2) -> unifyBack arguments e1 e2
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
@@ -220,6 +223,7 @@ module ExecutionModule =
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (parameters: Argument list) (expr: Expression) =
             match expr with
+            | True -> [True]
             | NotExpression e -> List.map (NotExpression) (executeExpression parameters e)
             | OrExpression (e1, e2) ->
                 let first = executeExpression parameters e1 |> List.map (fun v -> OrExpression(v, NotExecuted e2))
@@ -272,8 +276,7 @@ module ExecutionModule =
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute goal rule = 
-        let (Goal(name, arguments)) = goal
+    let execute (Goal(name, arguments)) rule =
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then
@@ -282,3 +285,13 @@ module ExecutionModule =
             else
                 []
         | None -> []
+
+    let checkApply (Goal(name, arguments)) (Rule(Signature(ruleName, ruleParams), _)) =
+        name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
+
+    let checkGoal goal knowledgeBase =
+        knowledgeBase
+        |> List.filter (checkApply goal)
+        |> List.collect (fun r ->
+            execute goal r
+        )
