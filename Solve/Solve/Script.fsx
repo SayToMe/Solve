@@ -55,58 +55,59 @@ module TestExecutionModule =
 
     module testExecuteExpression = 
         let test() = 
+            let executeCustom a = failwith "unexpected input"
             let exExp1 = 
-                ExecutionModule.executeExpression [sna 1.] (EqExpr(sv "N", sn 1.))
+                ExecutionModule.executeExpression [sna 1.] (EqExpr(sv "N", sn 1.)) executeCustom
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp2 = 
-                ExecutionModule.executeExpression [va "N"] (EqExpr(sv "N", sn 1.))
+                ExecutionModule.executeExpression [va "N"] (EqExpr(sv "N", sn 1.)) executeCustom
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp3 = 
-                ExecutionModule.executeExpression [sna 1.; va "N"] (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.)))
+                ExecutionModule.executeExpression [sna 1.; va "N"] (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom
                 |> check "ex exp3" [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
             ()
 
     module testExecute = 
         let test() = 
             let ex1 = 
-                ExecutionModule.execute (Goal("eq1", [va "N"])) (Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.))))
+                ExecutionModule.checkGoal (Goal("eq1", [va "N"])) [Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
                 |> check "execute1" [[sn 1.]]
             let ex2 = 
-                ExecutionModule.execute (Goal("eq2", [sna 1.])) (Rule(Signature("eq2", [vp "N"]), (EqExpr(sv "N", sn 1.))))
+                ExecutionModule.checkGoal (Goal("eq2", [sna 1.])) [Rule(Signature("eq2", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
                 |> check "execute2" [[sn 1.]]
             let ex3 = 
-                ExecutionModule.execute (Goal("eq3", [sna 2.])) (Rule(Signature("eq3", [vp "N"]), (EqExpr(sv "N", sn 1.))))
+                ExecutionModule.checkGoal (Goal("eq3", [sna 2.])) [Rule(Signature("eq3", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
                 |> check "execute3" []
             
             let andCheck =
-                ExecutionModule.execute (Goal("or", [va "N"])) (Rule(Signature("or", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.)))))
+                ExecutionModule.checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
                 |> check "execute3" []
 
             let orCheck =
-                ExecutionModule.execute (Goal("or", [va "N"])) (Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.)))))
+                ExecutionModule.checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
                 |> check "execute3" [[sn 1.]; [sn 2.]]
             ()
 
     module RealTest =
         let test() =
             let eq1 = 
-                ExecutionModule.execute (Goal("eq1_both", [va "N"; va "Res"])) (Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.)))))))
+                ExecutionModule.checkGoal (Goal("eq1_both", [va "N"; va "Res"])) [Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.))))))]
                 |> check "and test1" [[sn 1.; sn 1.]]
             let eq2 = 
-                ExecutionModule.execute(Goal("eq", [va "N"; va "N2"])) (Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2"))))
+                ExecutionModule.checkGoal(Goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
                 |> check "eq test" [[sv "N2"; sv "N2"]]
 
             let f = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), EqExpr(sv "Res", sn 2.)))
             let f1 = 
-                ExecutionModule.execute (Goal("f1", [sna 1.; va "Res"])) f
+                ExecutionModule.checkGoal (Goal("f1", [sna 1.; va "Res"])) [f]
                 |> check "f1" [[sn 1.; sn 1.]; [sn 1.; sn 2.]]
             let f1 =
-                ExecutionModule.execute (Goal("f1", [sna 3.; va "Res"])) f
+                ExecutionModule.checkGoal (Goal("f1", [sna 3.; va "Res"])) [f]
                 |> check "f2" [[sn 3.; sn 2.]]
 
             let factorial : Rule = (("factorial" /=> [variable "N"; variable "Res"])) ==> (fun [Parameter(N); Parameter(Res)] -> ((N /> AnyTyped(snum1)) /& (CalcExpr (N, inc (CalcAny N)))) /| (Res /= (sn 1.)))
             let f3 = 
-                ExecutionModule.execute (Goal("factorial", [sna 3.; va "Res"])) factorial
+                ExecutionModule.checkGoal (Goal("factorial", [sna 3.; va "Res"])) [factorial]
                 |> check "f3" [[sn 3.; sn 1.]]
             ()
 
