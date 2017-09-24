@@ -86,6 +86,9 @@ module TestExecutionModule =
             let orCheck =
                 ExecutionModule.checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
                 |> check "execute3" [[sn 1.]; [sn 2.]]
+
+            let innerVariableCheck =
+                ExecutionModule.checkGoal (Goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
             ()
 
     module RealTest =

@@ -1,8 +1,5 @@
 ﻿To implement:
-* Probably AST could be wrong way to resolve recursive and subcall rules
-* Maybe we should have some sort of knowledge base
-* Custom calls
-* Strings and lists
+* Temporary variables
 
 Check on:
 * Implementation of facts
@@ -12,3 +9,5 @@ Currently support:
 * Complex rules
 * Multiple results
 * Unification with different parameter/argument variable names
+* Strings and lists
+* Custom calls

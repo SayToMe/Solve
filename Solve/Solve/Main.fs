@@ -1,9 +1,12 @@
 ﻿namespace Solve
 
+open System.Diagnostics
+
 [<AutoOpen>]
 module STypes =
     [<AutoOpen>]
     module Concrete =
+
         type SBool = SBool of bool
         type SNumber = SNumber of double
         type SChar = SChar of char
@@ -15,8 +18,25 @@ module STypes =
     module Another =
         type AnonimVariable = AnonimVariable
         type Variable = Variable of string | WildVariable
+        
+    [<StructuredFormatDisplay("{AsString}")>]
+    type Any = AnyVariable of Variable | AnyTyped of Typed
 
-type Any = AnyVariable of Variable | AnyTyped of Typed
+    let rec formatAny = 
+        let rec formatTyped = 
+            function
+            | TypedSBool(SBool v) -> v.ToString()
+            | TypedSNumber(SNumber v) -> v.ToString()
+            | TypedSChar(SChar v) -> v.ToString()
+            | TypedSList(SList v) when List.forall (function | TypedSChar (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
+            | TypedSList(SList v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
+        function
+        | AnyVariable(Variable(v)) -> "var" + v
+        | AnyVariable(WildVariable) -> "_"
+        | AnyTyped(typed) -> formatTyped typed
+
+    type Any with
+        member a.AsString = formatAny a
 
 type Argument = Argument of Any
 
@@ -216,8 +236,8 @@ module ExecutionModule =
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
-        | (CallExpression(Goal(goalName1, goalArgs1)), CallExpression(Goal(goalName2, goalArgs2))) ->
-            goalArgs2 |> fromArgs // result args
+        | (CallExpression(Goal(name1, goalArgs1)), CallExpression(Goal(name2, goalArgs2))) when name1 = name2 ->
+            List.fold2 (fun args (Argument(arg1)) (Argument(arg2)) -> unifyWithArgs args arg1 arg2) arguments goalArgs1 goalArgs2
         | (CalcExpr(v1, _), CalcExpr(v2, _)) -> unifyWithArgs arguments v1 v2
         | (EqExpr(v1, v2), EqExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
         | (GrExpr(v1, v2), GrExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
