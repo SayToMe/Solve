@@ -1,5 +1,6 @@
 ﻿To implement:
 * Temporary variables
+* Not expression
 
 Check on:
 * Implementation of facts

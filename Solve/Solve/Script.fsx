@@ -87,8 +87,17 @@ module TestExecutionModule =
                 ExecutionModule.checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
                 |> check "execute3" [[sn 1.]; [sn 2.]]
 
+            let falseCheck =
+                ExecutionModule.checkGoal (Goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (False))]
+                |> check "false check" []
+
+            let notCheck =
+                ExecutionModule.checkGoal (Goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (NotExpression(True)))]
+                |> check "not true check" []
+
             let innerVariableCheck =
                 ExecutionModule.checkGoal (Goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
+                |> check "innervar not supported" [[sn 1.]]
             ()
 
     module RealTest =
@@ -100,10 +109,10 @@ module TestExecutionModule =
                 ExecutionModule.checkGoal(Goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
                 |> check "eq test" [[sv "N2"; sv "N2"]]
 
-            let f = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), EqExpr(sv "Res", sn 2.)))
+            let f = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), AndExpression(GrExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 2.))))
             let f1 = 
                 ExecutionModule.checkGoal (Goal("f1", [sna 1.; va "Res"])) [f]
-                |> check "f1" [[sn 1.; sn 1.]; [sn 1.; sn 2.]]
+                |> check "f1" [[sn 1.; sn 1.]]
             let f1 =
                 ExecutionModule.checkGoal (Goal("f1", [sna 3.; va "Res"])) [f]
                 |> check "f2" [[sn 3.; sn 2.]]

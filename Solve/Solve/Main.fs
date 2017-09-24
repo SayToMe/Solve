@@ -21,22 +21,19 @@ module STypes =
         
     [<StructuredFormatDisplay("{AsString}")>]
     type Any = AnyVariable of Variable | AnyTyped of Typed
-
-    let rec formatAny = 
-        let rec formatTyped = 
-            function
-            | TypedSBool(SBool v) -> v.ToString()
-            | TypedSNumber(SNumber v) -> v.ToString()
-            | TypedSChar(SChar v) -> v.ToString()
-            | TypedSList(SList v) when List.forall (function | TypedSChar (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
-            | TypedSList(SList v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
-        function
-        | AnyVariable(Variable(v)) -> "var" + v
-        | AnyVariable(WildVariable) -> "_"
-        | AnyTyped(typed) -> formatTyped typed
-
-    type Any with
-        member a.AsString = formatAny a
+        with
+        member a.AsString =
+            match a with
+            | AnyVariable(Variable(v)) -> "~" + v + "~"
+            | AnyVariable(WildVariable) -> "_"
+            | AnyTyped(typed) ->
+                let rec formatTyped = function
+                                      | TypedSBool(SBool v) -> v.ToString()
+                                      | TypedSNumber(SNumber v) -> v.ToString()
+                                      | TypedSChar(SChar v) -> v.ToString()
+                                      | TypedSList(SList v) when List.forall (function | TypedSChar (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
+                                      | TypedSList(SList v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
+                formatTyped typed
 
 type Argument = Argument of Any
 
@@ -61,6 +58,7 @@ module CalcModule =
 type Expression =
     // Used as false or not executed cut
     | True
+    | False
     | NotExecuted of Expression
     | NotExpression of Expression
     | OrExpression of Expression * Expression
@@ -139,6 +137,7 @@ module ExecutionModule =
     let rec unifyExpression expression changeVariable =
                 match expression with
                 | True -> True
+                | False -> False
                 | NotExpression e -> NotExpression (unifyExpression e changeVariable)
                 | OrExpression (e1, e2) -> OrExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
                 | AndExpression (e1, e2) -> AndExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
@@ -171,6 +170,7 @@ module ExecutionModule =
                         | Invert (v1) -> Invert(changeCalcTermIfVariable v1)
                         | Sqrt (v1) -> Sqrt(changeCalcTermIfVariable v1)
                         | Log (v1, n) -> Log(changeCalcTermIfVariable v1, changeCalcTermIfVariable n)
+                        | Value(v) -> Value(changeCalcTermIfVariable v)
                     match v with
                     | AnyVariable(vv) -> CalcExpr(changeVariable vv, unifyCalc c)
                     | _ -> expression
@@ -231,6 +231,7 @@ module ExecutionModule =
 
         match (initialExpression, expression) with
         | (True, True) -> arguments
+        | (False, False) -> []
         | (_, NotExecuted e) -> arguments
         | (NotExpression e1, NotExpression e2) -> unifyBack arguments e1 e2
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
@@ -248,6 +249,7 @@ module ExecutionModule =
     let rec executeExpression (parameters: Argument list) (expr: Expression) executeCustom =
             match expr with
             | True -> [True]
+            | False -> []
             | NotExpression e -> List.map (NotExpression) (executeExpression parameters e executeCustom)
             | OrExpression (e1, e2) ->
                 let first = executeExpression parameters e1 executeCustom |> List.map (fun v -> OrExpression(v, NotExecuted e2))

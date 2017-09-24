@@ -38,7 +38,7 @@ let formatResult (result: Any list list) =
         | [h] -> "[" + fn h + "]"
         | list -> "[" + (List.fold (fun acc n -> if acc = "" then fn n else acc + ", " + fn n) "" list) + "]"
 
-    format (format formatAny) result
+    format (format (fun (a: Any) -> a.AsString)) result
 
 // RealTests
 let person p = Rule(Signature("person", [Parameter(stringAny p)]), True)
