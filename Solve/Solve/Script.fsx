@@ -65,13 +65,13 @@ module TestExecutionModule =
         let test() = 
             let executeCustom a = failwith "unexpected input"
             let exExp1 = 
-                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> match v with | AnyVariable(v) -> sn 1. | _ -> v)
+                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> sn 1.)
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp2 = 
-                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> v)
+                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> AnyVariable(v))
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp3 = 
-                ExecutionModule.executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> match v with | AnyVariable(v) -> sn 1. | _ -> v)
+                ExecutionModule.executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
                 |> check "ex exp3" [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
             ()
 
