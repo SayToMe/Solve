@@ -45,3 +45,8 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+/Solve/.vs/*
+/Solve/packages/*
+/Solve/Solve/bin/*
+/Solve/Solve/obj/*
