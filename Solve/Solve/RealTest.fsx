@@ -31,15 +31,6 @@ let charAny c = AnyTyped(TypedSChar(SChar(c)))
 [<DebuggerStepThrough>]
 let stringAny (str: string) = AnyTyped(TypedSList(SList(str.ToCharArray() |> Array.map (SChar >> TypedSChar) |> Array.toList)))
 
-let formatResult (result: Any list list) =
-    let format fn =
-        function
-        | [] -> "[]"
-        | [h] -> "[" + fn h + "]"
-        | list -> "[" + (List.fold (fun acc n -> if acc = "" then fn n else acc + ", " + fn n) "" list) + "]"
-
-    format (format (fun (a: Any) -> a.AsString)) result
-
 // RealTests
 let person p = Rule(Signature("person", [Parameter(stringAny p)]), True)
 let parent p d = Rule(Signature("parent", [Parameter(stringAny p); Parameter(stringAny d)]), True)
@@ -58,13 +49,20 @@ let knowledgebase = [
     grandparent
 ]
 
-ExecutionModule.checkGoal (Goal("person", [Argument(stringAny "Polina")])) knowledgebase |> formatResult
-ExecutionModule.checkGoal (Goal("person", [va "X"])) knowledgebase |> formatResult
-ExecutionModule.checkGoal (Goal("person", [Argument(stringAny "Miwa")])) knowledgebase |> formatResult
+ExecutionModule.checkGoal (Goal("person", [Argument(stringAny "Polina")])) knowledgebase
+|> check "check polina" [[stringAny "Polina"]]
+ExecutionModule.checkGoal (Goal("person", [va "X"])) knowledgebase
+|> check "check people" [[stringAny "Mary"]; [stringAny "Polina"]; [stringAny "Evgeniy"]; [stringAny "Solniwko"]]
+ExecutionModule.checkGoal (Goal("person", [Argument(stringAny "Miwa")])) knowledgebase
+|> check "check missing person" []
 
-ExecutionModule.checkGoal (Goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase |> formatResult
-ExecutionModule.checkGoal (Goal("parent", [va "Parent"; va "Descendant"])) knowledgebase |> formatResult
+ExecutionModule.checkGoal (Goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase
+|> check "check defined parent" [[stringAny "Polina"; stringAny "Evgeniy"]]
+ExecutionModule.checkGoal (Goal("parent", [va "Parent"; va "Descendant"])) knowledgebase
+|> check "check all parents" [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
 
-ExecutionModule.checkGoal (Goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase |> formatResult
+ExecutionModule.checkGoal (Goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase
+|> check "check all parents" [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
 
-ExecutionModule.checkGoal (Goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase |> formatResult
+ExecutionModule.checkGoal (Goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
+|> check "check defined parent" [[stringAny "Mary"; stringAny "Evgeniy"]]

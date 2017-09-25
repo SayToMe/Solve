@@ -116,6 +116,15 @@ module MainModule =
     let schar v = TypedSChar <| SChar v
 
     [<DebuggerStepThrough>]
+    let formatResult (result: Result) =
+        let format fn =
+            function
+            | [] -> "[]"
+            | [h] -> "[" + fn h + "]"
+            | list -> "[" + (List.fold (fun acc n -> if acc = "" then fn n else acc + ", " + fn n) "" list) + "]"
+        format (format (fun (a: Any) -> a.AsString)) result
+
+    [<DebuggerStepThrough>]
     let (=>) sign body = Rule (sign, body)
     [<DebuggerStepThrough>]
     let (/=>) name variables = signature name variables
