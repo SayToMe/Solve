@@ -1,16 +1,24 @@
 ﻿#load "Main.fs"
 
 open Solve
+open System.Diagnostics
 
+[<DebuggerStepThrough>]
 let check errorName expected actual = if actual = expected then expected else (failwithf "%s. %O != %O" errorName actual expected)
 
+[<DebuggerStepThrough>]
 let sn x = AnyTyped(TypedSNumber(SNumber x))
+[<DebuggerStepThrough>]
 let sv x = AnyVariable(Variable(x))
 
+[<DebuggerStepThrough>]
 let snp x = Parameter(sn x)
+[<DebuggerStepThrough>]
 let vp n = Parameter(AnyVariable(Variable(n)))
 
+[<DebuggerStepThrough>]
 let sna x = Argument(sn x)
+[<DebuggerStepThrough>]
 let va n = Argument(AnyVariable(Variable(n)))
 
 module TestExecutionModule =
@@ -57,13 +65,13 @@ module TestExecutionModule =
         let test() = 
             let executeCustom a = failwith "unexpected input"
             let exExp1 = 
-                ExecutionModule.executeExpression [sna 1.] (EqExpr(sv "N", sn 1.)) executeCustom
+                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> match v with | AnyVariable(v) -> sn 1. | _ -> v)
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp2 = 
-                ExecutionModule.executeExpression [va "N"] (EqExpr(sv "N", sn 1.)) executeCustom
+                ExecutionModule.executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> v)
                 |> check "ex exp1" [EqExpr(sn 1., sn 1.)]
             let exExp3 = 
-                ExecutionModule.executeExpression [sna 1.; va "N"] (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom
+                ExecutionModule.executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> match v with | AnyVariable(v) -> sn 1. | _ -> v)
                 |> check "ex exp3" [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
             ()
 
@@ -80,7 +88,7 @@ module TestExecutionModule =
                 |> check "execute3" []
             
             let andCheck =
-                ExecutionModule.checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
+                ExecutionModule.checkGoal (Goal("and", [va "N"])) [Rule(Signature("and", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
                 |> check "execute3" []
 
             let orCheck =
@@ -113,7 +121,7 @@ module TestExecutionModule =
             let f1 = 
                 ExecutionModule.checkGoal (Goal("f1", [sna 1.; va "Res"])) [f]
                 |> check "f1" [[sn 1.; sn 1.]]
-            let f1 =
+            let f2 =
                 ExecutionModule.checkGoal (Goal("f1", [sna 3.; va "Res"])) [f]
                 |> check "f2" [[sn 3.; sn 2.]]
 

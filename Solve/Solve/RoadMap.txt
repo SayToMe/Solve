@@ -1,9 +1,9 @@
 ﻿To implement:
-* Temporary variables
 * Not expression
+* expression term - variable of functor/parameters
 
 Check on:
-* Implementation of facts
+* Do we need not executed expression?
 
 Currently support:
 * Basic rules
@@ -12,3 +12,4 @@ Currently support:
 * Unification with different parameter/argument variable names
 * Strings and lists
 * Custom calls
+* Temporary variables

@@ -50,8 +50,9 @@ let knowledgebase = [
     person "Polina";
     person "Evgeniy";
     person "Solniwko";
-
+    
     parent "Mary" "Polina";
+    parent "Solniwko" "Polina";
     parent "Polina" "Evgeniy";
 
     grandparent

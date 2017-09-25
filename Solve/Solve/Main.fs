@@ -71,6 +71,8 @@ type Expression =
     | LeExpr of Any * Any
 and Rule = Rule of Signature * Expression
 
+type Result = Any list list
+
 [<AutoOpen>]
 module MainModule = 
     let variable (name: string) = AnyVariable (Variable name)
@@ -134,6 +136,21 @@ module ExecutionModule =
         else
             Some <| List.map Option.get prms
 
+    let rec unifyCalc2 changeVariable v =
+                        let changeCalcTermIfVariable =
+                            function
+                            | CalcInner c -> CalcInner(unifyCalc2 changeVariable c)
+                            | CalcAny v -> CalcAny(changeVariable v)
+                        match v with
+                        | Plus (v1, v2) -> Plus(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
+                        | Subsctruct (v1, v2) -> Subsctruct(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
+                        | Multiply (v1, v2) -> Multiply(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
+                        | Division (v1, v2) -> Division(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
+                        | Invert (v1) -> Invert(changeCalcTermIfVariable v1)
+                        | Sqrt (v1) -> Sqrt(changeCalcTermIfVariable v1)
+                        | Log (v1, n) -> Log(changeCalcTermIfVariable v1, changeCalcTermIfVariable n)
+                        | Value(v) -> Value(changeCalcTermIfVariable v)
+
     let rec unifyExpression expression changeVariable =
                 match expression with
                 | True -> True
@@ -193,7 +210,33 @@ module ExecutionModule =
                     | (AnyTyped(_), AnyVariable(v2)) -> LeExpr(e1, changeVariable v2)
                     | _ -> expression
                 | _ -> failwith "unchecked something"
-
+                
+    // returns change variable functions according to execution branches
+    let getChangedVariableFns initialExpression expression =
+        let rec _getChangedVariableFn initialExpression expression changedVariableFns =
+            match (initialExpression, expression) with
+            | (True, True) -> changedVariableFns
+            | (False, False) -> changedVariableFns
+            | (_, NotExecuted e) -> changedVariableFns
+            | (NotExpression e1, NotExpression e2) -> _getChangedVariableFn e1 e2 changedVariableFns
+            | (OrExpression(e1, e2), OrExpression(e3, e4)) ->
+                let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
+                let changedFn2 = _getChangedVariableFn e2 e4 changedVariableFns
+                changedFn1@changedFn2
+            | (AndExpression(e1, e2), AndExpression(e3, e4)) ->
+                let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
+                let changedFn2 = _getChangedVariableFn e2 e4 changedFn1
+                changedFn2
+            | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (fun fn -> fun v -> if v = e1 then e2 else fn v)
+            | (CallExpression(Goal(name1, goalArgs1)), CallExpression(Goal(name2, goalArgs2))) when name1 = name2 ->
+                 List.map (fun fn -> List.fold2 (fun fns a1 a2 -> fun v -> if v = a1 then a2 else fns v) fn (fromArgs goalArgs1) (fromArgs goalArgs2)) changedVariableFns
+            | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (fun fn -> fun v -> if v = v1 then v2 else fn v)
+            | (EqExpr(v1, v2), EqExpr(v3, v4)) -> changedVariableFns |> List.map (fun fn -> fun v -> if v = v1 then v3 else if v = v2 then v4 else fn v)
+            | (GrExpr(v1, v2), GrExpr(v3, v4)) -> changedVariableFns |> List.map (fun fn -> fun v -> if v = v1 then v3 else if v = v2 then v4 else fn v)
+            | (LeExpr(v1, v2), LeExpr(v3, v4)) -> changedVariableFns |> List.map (fun fn -> fun v -> if v = v1 then v3 else if v = v2 then v4 else fn v)
+            | _ -> failwithf "failed to getChangedVariableFn result. %O != %O" initialExpression expression
+        _getChangedVariableFn initialExpression expression [(fun v -> v)]
+        
     let unifyExpressionByParams parameters arguments expression =
         let changeVariable (Parameter(p)) a =
                 match (p, a) with
@@ -203,7 +246,7 @@ module ExecutionModule =
                 | _ -> fun x -> AnyVariable x
 
         unifyParamsWithArguments parameters arguments
-        |> Option.bind (fun unifiedArgs -> 
+        |> Option.bind (fun unifiedArgs ->
             let newExpr = 
                 List.zip parameters unifiedArgs
                 |> List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression
@@ -246,35 +289,50 @@ module ExecutionModule =
         | _ -> failwithf "failed to unify result. %O != %O" initialExpression expression
 
     // TODO: maybe we should unify each time we execute expression?
-    let rec executeExpression (parameters: Argument list) (expr: Expression) executeCustom =
+    let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
             match expr with
             | True -> [True]
             | False -> []
-            | NotExpression e -> List.map (NotExpression) (executeExpression parameters e executeCustom)
+            | NotExpression e -> List.map (NotExpression) (executeExpression e executeCustom changeVariableFn)
             | OrExpression (e1, e2) ->
-                let first = executeExpression parameters e1 executeCustom |> List.map (fun v -> OrExpression(v, NotExecuted e2))
-                let second = (executeExpression parameters e2 executeCustom |> List.map (fun x -> OrExpression(NotExecuted e1, x)))
+                let first = executeExpression e1 executeCustom changeVariableFn |> List.map (fun v -> OrExpression(v, NotExecuted e2))
+                let second = (executeExpression e2 executeCustom changeVariableFn |> List.map (fun x -> OrExpression(NotExecuted e1, x)))
                 first@second
             | AndExpression (e1, e2) ->
-                executeExpression parameters e1 executeCustom
-                |> List.collect (fun e1_ ->
-                    let newParameters = unifyBack (fromArgs parameters) e1 e1_ |> toArgs
+                executeExpression e1 executeCustom changeVariableFn
+                |> List.collect (fun _e1 ->
+                    getChangedVariableFns e1 _e1
+                    |> List.collect (fun fn ->
+                        let _e2 = unifyExpression e2 (fun v -> fn (AnyVariable(v)))
+                        let ffn = getChangedVariableFns e2 _e2
 
-                    match unifyExpressionByParams (parameters |> fromArgs |> toParams) newParameters e2 with
-                    //| Some(e2_, newArgs) -> executeExpression newParameters e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
-                    | Some(e2_, newArgs) -> executeExpression (toArgs newArgs) e2_ executeCustom |> List.map(fun e2__ -> AndExpression(e1_, e2__))
-                    | None -> []
+                        ffn
+                        |> List.collect (fun fn ->
+                            executeExpression _e2 executeCustom fn
+                            |> List.map (fun _e2res -> AndExpression(_e1, _e2res))
+                        )
+                    )
+                    //let newParameters = unifyBack (fromArgs parameters) e1 _e1 |> toArgs
+
+                    //match unifyExpressionByParams (parameters |> fromArgs |> toParams) newParameters e2 with
+                    ////| Some(e2_, newArgs) -> executeExpression newParameters e2_ |> List.map(fun e2__ -> AndExpression(e1_, e2__))
+                    //| Some(e2_, newArgs) -> executeExpression (toArgs newArgs) e2_ executeCustom |> List.map(fun e2__ -> AndExpression(_e1, e2__))
+                    //| None -> []
                 )
             | ResultExpression e -> [ResultExpression e]
             | CallExpression (Goal(goalSign, goalArgs)) ->
                 executeCustom (Goal(goalSign, goalArgs))
                 |> List.map (fun resExpr -> CallExpression(Goal(goalSign, resExpr |> toArgs)))
             | CalcExpr (v, c) ->
+                let v = changeVariableFn v
+                let c = unifyCalc2 changeVariableFn c
                 match v with
                 | AnyVariable(vv) -> [CalcExpr(AnyTyped(TypedSNumber(executeCalc c)), c)]
                 | AnyTyped(TypedSNumber(vv)) as ww when vv = (executeCalc c) -> [CalcExpr(AnyTyped(TypedSNumber(vv)), c)]
                 | _ -> []
             | EqExpr (e1, e2) ->
+                let e1 = changeVariableFn e1
+                let e2 = changeVariableFn e2
                 match (e1, e2) with
                 | (AnyVariable(v1), AnyVariable(v2)) -> [EqExpr(e2, e2)]
                 | (AnyVariable(v1), AnyTyped(v2)) -> [EqExpr(e2, e2)]
@@ -282,18 +340,22 @@ module ExecutionModule =
                 | (AnyTyped(v1), AnyTyped(v2)) when v1 = v2 -> [EqExpr(e2, e2)]
                 | _ -> []
             | GrExpr (e1, e2) ->
+                let e1 = changeVariableFn e1
+                let e2 = changeVariableFn e2
                 match (e1, e2) with
-                | (AnyVariable(v1), AnyVariable(v2)) -> [GrExpr(e2, e2)]
-                | (AnyVariable(v1), AnyTyped(v2)) -> [GrExpr(e2, e2)]
-                | (AnyTyped(v1), AnyVariable(v2)) -> [GrExpr(e1, e1)]
-                | (AnyTyped(v1), AnyTyped(v2)) when v1 > v2 -> [GrExpr(e2, e2)]
+                | (AnyVariable(v1), AnyVariable(v2)) -> [GrExpr(e1, e2)]
+                | (AnyVariable(v1), AnyTyped(v2)) -> [GrExpr(e1, e2)]
+                | (AnyTyped(v1), AnyVariable(v2)) -> [GrExpr(e1, e2)]
+                | (AnyTyped(v1), AnyTyped(v2)) when v1 > v2 -> [GrExpr(e1, e2)]
                 | _ -> []
             | LeExpr (e1, e2) ->
+                let e1 = changeVariableFn e1
+                let e2 = changeVariableFn e2
                 match (e1, e2) with
-                | (AnyVariable(v1), AnyVariable(v2)) -> [LeExpr(e2, e2)]
-                | (AnyVariable(v1), AnyTyped(v2)) -> [LeExpr(e2, e2)]
+                | (AnyVariable(v1), AnyVariable(v2)) -> [LeExpr(e1, e2)]
+                | (AnyVariable(v1), AnyTyped(v2)) -> [LeExpr(e1, e2)]
                 | (AnyTyped(v1), AnyVariable(v2)) -> [LeExpr(e1, e1)]
-                | (AnyTyped(v1), AnyTyped(v2)) when v1 < v2 -> [LeExpr(e2, e2)]
+                | (AnyTyped(v1), AnyTyped(v2)) when v1 < v2 -> [LeExpr(e1, e2)]
                 | _ -> []
             | _ -> []
             
@@ -306,7 +368,9 @@ module ExecutionModule =
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then
-                executeExpression (fromParams unifiedRuleArgs |> toArgs) expr executeCustom
+                let changeVar = List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if v = p then a else acc v) (fun v -> v) unifiedRuleArgs arguments
+
+                executeExpression expr executeCustom changeVar
                 |> List.map (unifyBack (fromParams unifiedRuleArgs) expr) 
             else
                 []
