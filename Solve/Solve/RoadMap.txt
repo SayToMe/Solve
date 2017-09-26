@@ -1,9 +1,13 @@
 ﻿To implement:
+* Structs
+* Custom calls should accept variables to accept structs/booleans and others
+* Cuts
 * Not expression
-* expression term - variable of functor/parameters
+* Standard library
 
 Check on:
 * Do we need not executed expression?
+* Return values from complex expressions like (and(or(and)))
 
 Currently support:
 * Basic rules
