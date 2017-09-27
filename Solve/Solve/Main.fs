@@ -16,15 +16,14 @@ module STypes =
     [<AutoOpen>]
     module Another =
         type AnonimVariable = AnonimVariable
-        type Variable = Variable of string | WildVariable
+        type Variable = Variable of string
         
     [<StructuredFormatDisplay("{AsString}")>]
-    type Any = AnyVariable of Variable | AnyTyped of Typed
+    type Any = AnyVariable of Variable | AnyTyped of Typed | AnyStruct of Struct
         with
         member a.AsString =
             match a with
             | AnyVariable(Variable(v)) -> "~" + v + "~"
-            | AnyVariable(WildVariable) -> "_"
             | AnyTyped(typed) ->
                 let rec formatTyped = function
                                       | TypedSBool(SBool v) -> v.ToString()

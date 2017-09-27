@@ -4,6 +4,7 @@
 * Cuts
 * Not expression
 * Standard library
+* Wild card
 
 Check on:
 * Do we need not executed expression?

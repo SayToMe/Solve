@@ -99,10 +99,6 @@ module TestExecutionModule =
                 ExecutionModule.checkGoal (Goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (False))]
                 |> check "false check" []
 
-            let notCheck =
-                ExecutionModule.checkGoal (Goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (NotExpression(True)))]
-                |> check "not true check" []
-
             let innerVariableCheck =
                 ExecutionModule.checkGoal (Goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
                 |> check "innervar not supported" [[sn 1.]]
@@ -124,11 +120,6 @@ module TestExecutionModule =
             let f2 =
                 ExecutionModule.checkGoal (Goal("f1", [sna 3.; va "Res"])) [f]
                 |> check "f2" [[sn 3.; sn 2.]]
-
-            let factorial : Rule = (("factorial" /=> [variable "N"; variable "Res"])) ==> (fun [Parameter(N); Parameter(Res)] -> ((N /> AnyTyped(snum1)) /& (CalcExpr (N, inc (CalcAny N)))) /| (Res /= (sn 1.)))
-            let f3 = 
-                ExecutionModule.checkGoal (Goal("factorial", [sna 3.; va "Res"])) [factorial]
-                |> check "f3" [[sn 3.; sn 1.]]
             ()
 
 let executeAll =
