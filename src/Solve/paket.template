@@ -1,0 +1,25 @@
+type project
+title
+    Solve
+owners
+    saytome
+authors 
+    saytome
+projectUrl
+    https://github.com/saytome/Solve
+iconUrl
+    https://raw.githubusercontent.com/saytome/Solve/master/docs/files/img/logo.png
+licenseUrl
+    https://github.com/saytome/Solve/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    prolog
+summary
+    Prolog F# implementation
+description
+    Library for Prolog emulation
+
+
