@@ -1,17 +1,23 @@
 ﻿namespace Solve
 
+open Types
+open Types.Transformers
+
 open Rule
+open Rule.Transformers
 
 open VariableUnify
 open Execute
 
-module Main =
-    let checkApply (Goal(name, arguments)) (Rule(Signature(ruleName, ruleParams), _)) =
-        name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
+module Solve =
+    let rec solve goal knowledgeBase =
+        let checkAppliable goal (Rule(Signature(ruleName, ruleParams), _)) =
+            let (Goal(Struct(name, goalArguments))) = goal
+            let arguments = toArgs goalArguments
+            name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
 
-    let rec checkGoal goal knowledgeBase =
         knowledgeBase
-        |> List.filter (checkApply goal)
+        |> List.filter (checkAppliable goal)
         |> List.collect (fun r ->
-            execute goal r (fun custom -> checkGoal custom knowledgeBase)
+            execute goal r (fun custom -> solve custom knowledgeBase)
         )

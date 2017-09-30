@@ -90,22 +90,21 @@ module ExpressionUnify =
         | ResultExpression e ->
             match e with
             | AnyVariable v -> ResultExpression (changeVariable v)
-            | AnyTyped v -> expression
+            | AnyTyped _ -> expression
             | AnyStruct(v) -> ResultExpression(AnyStruct(processStruct changeVariable v))
-        | CallExpression (Goal(goalName, goalArgs)) -> 
+        | CallExpression goal ->
+            let (Goal(Struct(goalName, arguments))) = goal
             let newGoalArgs =
-                goalArgs
-                |> List.map (fun (Argument(arg)) ->
-                   match arg with
-                   | AnyVariable(v) -> Argument(changeVariable v)
-                   | AnyTyped(_) -> Argument(arg)
-                   | AnyStruct(v) -> Argument(AnyStruct(processStruct changeVariable v)))
-            CallExpression (Goal(goalName, newGoalArgs))
+                List.map (function
+                            | AnyVariable(v) -> Argument(changeVariable v)
+                            | AnyTyped(v) -> Argument(AnyTyped(v))
+                            | AnyStruct(v) -> Argument(AnyStruct(processStruct changeVariable v))) arguments
+            CallExpression (Goal(Struct(goalName, fromArgs newGoalArgs)))
         | CalcExpr (v, c) ->
             match v with
             | AnyVariable(vv) -> CalcExpr(changeVariable vv, unifyCalc changeVariable c)
             | AnyTyped(v) -> CalcExpr(AnyTyped(v), unifyCalc changeVariable c)
-            | AnyStruct s -> failwith "Calc of custom struct is not implemented yet"
+            | AnyStruct _ -> failwith "Calc of custom struct is not implemented yet"
         | EqExpr (e1, e2) -> postUnifyBinaryExpression changeVariable EqExpr e1 e2
         | GrExpr (e1, e2) -> postUnifyBinaryExpression changeVariable GrExpr e1 e2
         | LeExpr (e1, e2) -> postUnifyBinaryExpression changeVariable LeExpr e1 e2
@@ -117,7 +116,7 @@ module ExpressionUnify =
             match (initialExpression, expression) with
             | (True, True) -> changedVariableFns
             | (False, False) -> changedVariableFns
-            | (_, NotExecuted e) -> changedVariableFns
+            | (_, NotExecuted _) -> changedVariableFns
             | (NotExpression e1, NotExpression e2) -> _getChangedVariableFn e1 e2 changedVariableFns
             | (OrExpression(e1, e2), OrExpression(e3, e4)) ->
                 let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
@@ -128,8 +127,13 @@ module ExpressionUnify =
                 let changedFn2 = _getChangedVariableFn e2 e4 changedFn1
                 changedFn2
             | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (postUnifyUnaryExpressions e1 e2)
-            | (CallExpression(Goal(name1, goalArgs1)), CallExpression(Goal(name2, goalArgs2))) when name1 = name2 ->
-                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> postUnifyUnaryExpressions a1 a2 fns) fn (fromArgs goalArgs1) (fromArgs goalArgs2)) changedVariableFns
+            | (CallExpression(goal1), CallExpression(goal2)) ->
+                let (Goal(Struct(name1, goalArgs1))) = goal1
+                let (Goal(Struct(name2, goalArgs2))) = goal2
+                if name1 = name2 then
+                    List.map (fun fn -> List.fold2 (fun fns a1 a2 -> postUnifyUnaryExpressions a1 a2 fns) fn goalArgs1 goalArgs2) changedVariableFns
+                else
+                    failwith ""
             | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (postUnifyUnaryExpressions v1 v2)
             | (EqExpr(v1, v2), EqExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
             | (GrExpr(v1, v2), GrExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
@@ -166,13 +170,18 @@ module ExpressionUnify =
         match (initialExpression, expression) with
         | (True, True) -> arguments
         | (False, False) -> []
-        | (_, NotExecuted e) -> arguments
+        | (_, NotExecuted _) -> arguments
         | (NotExpression e1, NotExpression e2) -> unifyBack arguments e1 e2
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
         | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
-        | (CallExpression(Goal(name1, goalArgs1)), CallExpression(Goal(name2, goalArgs2))) when name1 = name2 ->
-            List.fold2 (fun args (Argument(arg1)) (Argument(arg2)) -> unifyWithArgs args arg1 arg2) arguments goalArgs1 goalArgs2
+        | (CallExpression(goal1), CallExpression(goal2)) ->
+            let (Goal(Struct(name1, goalArgs1))) = goal1
+            let (Goal(Struct(name2, goalArgs2))) = goal2
+            if name1 = name2 then
+                List.fold2 (fun args (arg1) (arg2) -> unifyWithArgs args arg1 arg2) arguments goalArgs1 goalArgs2
+            else 
+                failwith ""
         | (CalcExpr(v1, _), CalcExpr(v2, _)) -> unifyWithArgs arguments v1 v2
         | (EqExpr(v1, v2), EqExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
         | (GrExpr(v1, v2), GrExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4

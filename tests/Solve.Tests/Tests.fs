@@ -39,6 +39,9 @@ let charAny c = AnyTyped(TypedSChar(SChar(c)))
 [<DebuggerStepThrough>]
 let stringAny (str: string) = AnyTyped(TypedSList(SList(str.ToCharArray() |> Array.map (SChar >> TypedSChar) |> Array.toList)))
 
+[<DebuggerStepThrough>]
+let goal (name, args) = Goal(Struct(name, fromArgs args))
+
 [<TestFixture>]
 module SimpleTests =
     open VariableUnify
@@ -87,49 +90,49 @@ module SimpleTests =
         executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
         |> check "ex exp3" [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
 
-    open Main
+    open Solve
 
     [<Test>]
     let testExecute() = 
-        checkGoal (Goal("eq1", [va "N"])) [Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
+        solve (goal("eq1", [va "N"])) [Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
         |> check "execute1" [[sn 1.]]
 
-        checkGoal (Goal("eq2", [sna 1.])) [Rule(Signature("eq2", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
+        solve (goal("eq2", [sna 1.])) [Rule(Signature("eq2", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
         |> check "execute2" [[sn 1.]]
 
-        checkGoal (Goal("eq3", [sna 2.])) [Rule(Signature("eq3", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
+        solve (goal("eq3", [sna 2.])) [Rule(Signature("eq3", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
         |> check "execute3" []
             
-        checkGoal (Goal("and", [va "N"])) [Rule(Signature("and", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
+        solve (goal("and", [va "N"])) [Rule(Signature("and", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
         |> check "execute3" []
 
-        checkGoal (Goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
+        solve (goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
         |> check "execute3" [[sn 1.]; [sn 2.]]
 
-        checkGoal (Goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (False))]
+        solve (goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (False))]
         |> check "false check" []
 
-        checkGoal (Goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
+        solve (goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
         |> check "innervar not supported" [[sn 1.]]
 
     [<Test>]
     let realTest() =
-        checkGoal (Goal("eq1_both", [va "N"; va "Res"])) [Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.))))))]
+        solve (goal("eq1_both", [va "N"; va "Res"])) [Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.))))))]
         |> check "and test1" [[sn 1.; sn 1.]]
-        checkGoal(Goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
+        solve(goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
         |> check "eq test" [[sv "N2"; sv "N2"]]
 
         let pseudoFactorialRule = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), AndExpression(GrExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 2.))))
-        checkGoal (Goal("f1", [sna 1.; va "Res"])) [pseudoFactorialRule]
+        solve (goal("f1", [sna 1.; va "Res"])) [pseudoFactorialRule]
         |> check "f1" [[sn 1.; sn 1.]]
-        checkGoal (Goal("f1", [sna 3.; va "Res"])) [pseudoFactorialRule]
+        solve (goal("f1", [sna 3.; va "Res"])) [pseudoFactorialRule]
         |> check "f2" [[sn 3.; sn 2.]]
 
 [<TestFixture>]
 module RuleTests =
     let person p = Rule(Signature("person", [Parameter(stringAny p)]), True)
     let parent p d = Rule(Signature("parent", [Parameter(stringAny p); Parameter(stringAny d)]), True)
-    let grandparent = Rule(Signature("grandparent", [vp "G"; vp "D"]), AndExpression(CallExpression(Goal("parent", [va "G"; va "P"])), CallExpression(Goal("parent", [va "P"; va "D"]))))
+    let grandparent = Rule(Signature("grandparent", [vp "G"; vp "D"]), AndExpression(CallExpression(goal("parent", [va "G"; va "P"])), CallExpression(goal("parent", [va "P"; va "D"]))))
 
     let knowledgebase = [
         person "Mary";
@@ -144,27 +147,25 @@ module RuleTests =
         grandparent
     ]
 
-    open Main
-
     [<Test>]
     let testPersonRule() =
-        checkGoal (Goal("person", [Argument(stringAny "Polina")])) knowledgebase
+        solve (goal("person", [Argument(stringAny "Polina")])) knowledgebase
         |> check "check polina" [[stringAny "Polina"]]
-        checkGoal (Goal("person", [va "X"])) knowledgebase
+        solve (goal("person", [va "X"])) knowledgebase
         |> check "check people" [[stringAny "Mary"]; [stringAny "Polina"]; [stringAny "Evgeniy"]; [stringAny "Solniwko"]]
-        checkGoal (Goal("person", [Argument(stringAny "Miwa")])) knowledgebase
+        solve (goal("person", [Argument(stringAny "Miwa")])) knowledgebase
         |> check "check missing person" []
 
     [<Test>]
     let testParentRule() =
-        checkGoal (Goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase
+        solve (goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase
         |> check "check defined parent" [[stringAny "Polina"; stringAny "Evgeniy"]]
-        checkGoal (Goal("parent", [va "Parent"; va "Descendant"])) knowledgebase
+        solve (goal("parent", [va "Parent"; va "Descendant"])) knowledgebase
         |> check "check all parents" [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
 
     [<Test>]
     let testGrandparentRule() =
-        checkGoal (Goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase
+        solve (goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase
         |> check "check all parents" [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
-        checkGoal (Goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
+        solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
         |> check "check defined parent" [[stringAny "Mary"; stringAny "Evgeniy"]]

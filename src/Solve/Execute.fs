@@ -31,11 +31,11 @@ module Execute =
             let e2 = changeIfVariable changeVariableFn e2
             // postUnifyBinaryExpression (changeVariableFn) EqExpr e1 e2
             match (e1, e2) with
-            | (AnyVariable(v1), AnyVariable(v2)) -> [functor(e2, e2)]
-            | (AnyVariable(v1), AnyTyped(v2)) -> [functor(e2, e2)]
-            | (AnyVariable(v1), AnyStruct(v2)) -> [functor(e2, e2)]
-            | (AnyTyped(v1), AnyVariable(v2)) -> [functor(e1, e1)]
-            | (AnyStruct(v1), AnyVariable(v2)) -> [functor(e1, e1)]
+            | (AnyVariable(_), AnyVariable(_)) -> [functor(e2, e2)]
+            | (AnyVariable(_), AnyTyped(_)) -> [functor(e2, e2)]
+            | (AnyVariable(_), AnyStruct(_)) -> [functor(e2, e2)]
+            | (AnyTyped(_), AnyVariable(_)) -> [functor(e1, e1)]
+            | (AnyStruct(_), AnyVariable(_)) -> [functor(e1, e1)]
             | (AnyTyped(v1), AnyTyped(v2)) ->
                 if condition v1 v2 then
                     [functor(e1, e2)]
@@ -46,6 +46,7 @@ module Execute =
                     [functor(e1, e2)]
                 else
                     []
+            | _ -> failwith "unexpected execute binary expression arguments"
         match expr with
         | True -> [True]
         | False -> []
@@ -70,9 +71,10 @@ module Execute =
                 )
             )
         | ResultExpression e -> [ResultExpression e]
-        | CallExpression (Goal(goalSign, goalArgs)) ->
-            executeCustom (Goal(goalSign, goalArgs))
-            |> List.map (fun resExpr -> CallExpression(Goal(goalSign, resExpr |> toArgs)))
+        | CallExpression goal ->
+            let (Goal(Struct(goalSign, _))) = goal
+            executeCustom goal
+            |> List.map (fun resExpr -> CallExpression(Goal(Struct(goalSign, resExpr))))
         | CalcExpr (v, c) ->
             let v = changeIfVariable changeVariableFn v
             let c = unifyCalc changeVariableFn c
@@ -90,7 +92,9 @@ module Execute =
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute (Goal(name, arguments)) rule executeCustom =
+    let execute goal rule executeCustom =
+        let (Goal(Struct(name, goalArguments))) = goal
+        let arguments = toArgs goalArguments
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then

@@ -11,7 +11,7 @@ module Rule =
     type Parameter = Parameter of Any
 
     type Signature = Signature of string * Parameter list
-    type Goal = Goal of string * Argument list
+    type Goal = Goal of Struct
 
     [<AutoOpenAttribute>]
     module CalcModule =
