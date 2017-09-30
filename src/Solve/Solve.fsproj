@@ -55,6 +55,10 @@
     <None Include="paket.references" />
     <None Include="paket.template" />
     <Content Include="App.config" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Rule.fs" />
+    <Compile Include="Unify.fs" />
+    <Compile Include="Execute.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
   <ItemGroup>
