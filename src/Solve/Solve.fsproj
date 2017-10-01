@@ -57,7 +57,8 @@
     <Content Include="App.config" />
     <Compile Include="Types.fs" />
     <Compile Include="Rule.fs" />
-    <Compile Include="Unify.fs" />
+    <Compile Include="VariableUnify.fs" />
+    <Compile Include="ExpressionUnify.fs" />
     <Compile Include="Execute.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>

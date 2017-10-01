@@ -1,5 +1,4 @@
 ﻿To implement:
-* Custom calls should accept variables to accept structs/booleans and others
 * Calc calls by structs
 * Cuts
 * Not expression

@@ -23,6 +23,10 @@ module Execute =
 
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
+        let changeIfVariable changeVariable =
+            function
+            | AnyVariable(v) -> changeVariable v
+            | a -> a
         let executeBinaryExpression functor condition e1 e2 =
             // Hack for equality check
             let conditionIsEquality = condition (TypedSNumber(SNumber(1.))) (TypedSNumber(SNumber(1.)))
