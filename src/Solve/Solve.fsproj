@@ -61,6 +61,7 @@
     <Compile Include="ExpressionUnify.fs" />
     <Compile Include="Execute.fs" />
     <Compile Include="Main.fs" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

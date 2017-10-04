@@ -1,6 +1,6 @@
 ﻿namespace Solve
 
-open Types
+open TermTypes
 
 open Rule
 open Rule.Transformers
@@ -11,41 +11,41 @@ open ExpressionUnify
 module Execute =
     let executeCalc =
         function
-        | Value (CalcAny(AnyTyped(TypedSNumber(SNumber v1)))) -> SNumber v1
-        | Plus (CalcAny(AnyTyped(TypedSNumber(SNumber v1))), CalcAny(AnyTyped(TypedSNumber(SNumber v2)))) -> SNumber <| v1 + v2
-        | Subsctruct (CalcAny(AnyTyped(TypedSNumber(SNumber v1))), CalcAny(AnyTyped(TypedSNumber(SNumber v2)))) -> SNumber <| v1 - v2
-        | Multiply (CalcAny(AnyTyped(TypedSNumber(SNumber v1))), CalcAny(AnyTyped(TypedSNumber(SNumber v2)))) -> SNumber <| v1 * v2
-        | Division (CalcAny(AnyTyped(TypedSNumber(SNumber v1))), CalcAny(AnyTyped(TypedSNumber(SNumber v2)))) -> SNumber <| v1 / v2
-        | Invert (CalcAny(AnyTyped(TypedSNumber(SNumber v1)))) -> SNumber(-v1)
-        | Sqrt (CalcAny(AnyTyped(TypedSNumber(SNumber v1)))) -> SNumber <| System.Math.Sqrt v1
-        | Log (CalcAny(AnyTyped(TypedSNumber(SNumber v1))), CalcAny(AnyTyped(TypedSNumber(SNumber n)))) -> SNumber <| System.Math.Log(v1, float n)
+        | Value (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm v1
+        | Plus (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 + v2
+        | Subsctruct (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 - v2
+        | Multiply (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 * v2
+        | Division (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 / v2
+        | Invert (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm(-v1)
+        | Sqrt (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm <| System.Math.Sqrt v1
+        | Log (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm n)))) -> NumberTerm <| System.Math.Log(v1, float n)
         | _ -> failwith "incorrect calc expression called"
 
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
         let changeIfVariable changeVariable =
             function
-            | AnyVariable(v) -> changeVariable v
+            | VariableTerm(v) -> changeVariable v
             | a -> a
         let executeBinaryExpression functor condition e1 e2 =
             // Hack for equality check
-            let conditionIsEquality = condition (TypedSNumber(SNumber(1.))) (TypedSNumber(SNumber(1.)))
+            let conditionIsEquality = condition (TypedNumberTerm(NumberTerm(1.))) (TypedNumberTerm(NumberTerm(1.)))
 
             let e1 = changeIfVariable changeVariableFn e1
             let e2 = changeIfVariable changeVariableFn e2
             // postUnifyBinaryExpression (changeVariableFn) EqExpr e1 e2
             match (e1, e2) with
-            | (AnyVariable(_), AnyVariable(_)) -> [functor(e2, e2)]
-            | (AnyVariable(_), AnyTyped(_)) -> [functor(e2, e2)]
-            | (AnyVariable(_), AnyStruct(_)) -> [functor(e2, e2)]
-            | (AnyTyped(_), AnyVariable(_)) -> [functor(e1, e1)]
-            | (AnyStruct(_), AnyVariable(_)) -> [functor(e1, e1)]
-            | (AnyTyped(v1), AnyTyped(v2)) ->
+            | (VariableTerm(_), VariableTerm(_)) -> [functor(e2, e2)]
+            | (VariableTerm(_), TypedTerm(_)) -> [functor(e2, e2)]
+            | (VariableTerm(_), StructureTerm(_)) -> [functor(e2, e2)]
+            | (TypedTerm(_), VariableTerm(_)) -> [functor(e1, e1)]
+            | (StructureTerm(_), VariableTerm(_)) -> [functor(e1, e1)]
+            | (TypedTerm(v1), TypedTerm(v2)) ->
                 if condition v1 v2 then
                     [functor(e1, e2)]
                 else
                     []
-            | (AnyStruct(s1), AnyStruct(s2)) ->
+            | (StructureTerm(s1), StructureTerm(s2)) ->
                 if conditionIsEquality && s1 = s2 then
                     [functor(e1, e2)]
                 else
@@ -76,15 +76,15 @@ module Execute =
             )
         | ResultExpression e -> [ResultExpression e]
         | CallExpression goal ->
-            let (Goal(Struct(goalSign, _))) = goal
+            let (Goal(Structure(goalSign, _))) = goal
             executeCustom goal
-            |> List.map (fun resExpr -> CallExpression(Goal(Struct(goalSign, resExpr))))
+            |> List.map (fun resExpr -> CallExpression(Goal(Structure(goalSign, resExpr))))
         | CalcExpr (v, c) ->
             let v = changeIfVariable changeVariableFn v
             let c = unifyCalc changeVariableFn c
             match v with
-            | AnyVariable(_) -> [CalcExpr(AnyTyped(TypedSNumber(executeCalc c)), c)]
-            | AnyTyped(TypedSNumber(v)) when v = (executeCalc c) -> [CalcExpr(AnyTyped(TypedSNumber(v)), c)]
+            | VariableTerm(_) -> [CalcExpr(TypedTerm(TypedNumberTerm(executeCalc c)), c)]
+            | TypedTerm(TypedNumberTerm(v)) when v = (executeCalc c) -> [CalcExpr(TypedTerm(TypedNumberTerm(v)), c)]
             | _ -> []
         | EqExpr (e1, e2) -> executeBinaryExpression EqExpr (=) e1 e2
         | GrExpr (e1, e2) -> executeBinaryExpression GrExpr (>) e1 e2
@@ -96,13 +96,12 @@ module Execute =
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute goal rule executeCustom =
-        let (Goal(Struct(name, goalArguments))) = goal
+    let execute (Goal(Structure(name, goalArguments))) rule executeCustom =
         let arguments = toArgs goalArguments
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
             if name = ruleName then
-                let changeVar = List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if AnyVariable(v) = p then a else acc v) (fun v -> AnyVariable(v)) unifiedRuleArgs arguments
+                let changeVar = List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v)) unifiedRuleArgs arguments
 
                 let results = executeExpression expr executeCustom changeVar
                 let postResults = List.map (unifyBack (fromParams unifiedRuleArgs) expr) results

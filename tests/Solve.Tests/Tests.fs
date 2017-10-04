@@ -5,8 +5,8 @@ open System.Diagnostics
 
 open Solve
 
-open Types
-open Types.Transformers
+open TermTypes
+open TermTypes.Transformers
 
 open Rule
 open Rule.Transformers
@@ -17,45 +17,45 @@ let inline fail() = failwith ""
 let inline check (expected: 'a) (actual: 'a) = Assert.AreEqual(expected, actual)
 
 [<DebuggerStepThrough>]
-let sn x = AnyTyped(TypedSNumber(SNumber x))
+let sn x = TypedTerm(TypedNumberTerm(NumberTerm x))
 [<DebuggerStepThrough>]
-let sv x = AnyVariable(Variable(x))
+let sv x = VariableTerm(Variable(x))
 
 [<DebuggerStepThrough>]
 let snp x = Parameter(sn x)
 [<DebuggerStepThrough>]
-let vp n = Parameter(AnyVariable(Variable(n)))
+let vp n = Parameter(VariableTerm(Variable(n)))
 [<DebuggerStepThrough>]
-let charP c = Parameter(AnyTyped(TypedSChar(SChar(c))))
+let charP c = Parameter(TypedTerm(TypedCharTerm(CharTerm(c))))
 
 [<DebuggerStepThrough>]
 let sna x = Argument(sn x)
 [<DebuggerStepThrough>]
-let va n = Argument(AnyVariable(Variable(n)))
+let va n = Argument(VariableTerm(Variable(n)))
 [<DebuggerStepThrough>]
-let charA c = Argument(AnyTyped(TypedSChar(SChar(c))))
+let charA c = Argument(TypedTerm(TypedCharTerm(CharTerm(c))))
 
 [<DebuggerStepThrough>]
-let charAny c = AnyTyped(TypedSChar(SChar(c)))
+let charAny c = TypedTerm(TypedCharTerm(CharTerm(c)))
 
 [<DebuggerStepThrough>]
-let stringAny (str: string) = AnyTyped(TypedSList(SList(str.ToCharArray() |> Array.map (SChar >> TypedSChar) |> Array.toList)))
+let stringAny (str: string) = TypedTerm(TypedListTerm(ListTerm(str.ToCharArray() |> Array.map (CharTerm >> TypedCharTerm) |> Array.toList)))
 
 [<DebuggerStepThrough>]
-let goal (name, args) = Goal(Struct(name, fromArgs args))
+let goal (name, args) = Goal(Structure(name, fromArgs args))
 
 [<TestFixture>]
 module VariableUnifyTests =
     let getChangeVariableFunction var n =
         function
         | Variable(v) when v = var -> sn n
-        | v -> AnyVariable(v)
+        | v -> VariableTerm(v)
         
     [<Test>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
-        VariableUnify.processStruct changeVariable (Struct("test", [sv "N1"; sv "N"; sv "N"]))
-        |> check (Struct("test", [sv "N1"; sn 1.; sn 1.]))
+        VariableUnify.processStruct changeVariable (Structure("test", [sv "N1"; sv "N"; sv "N"]))
+        |> check (Structure("test", [sv "N1"; sn 1.; sn 1.]))
         
     [<Test>]
     let ``unify two any test``() =
@@ -64,7 +64,7 @@ module VariableUnifyTests =
             VariableUnify.unifyTwoAny b a |> check (Some b)
         checkFromVariableUnify (sv "N") (sv "N")
         checkFromVariableUnify (sv "N") (sn 1.)
-        checkFromVariableUnify (sv "N") (AnyStruct(Struct("123", [sv "N1"])))
+        checkFromVariableUnify (sv "N") (StructureTerm(Structure("123", [sv "N1"])))
 
         VariableUnify.unifyTwoAny (sv "N") (sv "N") |> check (Some(sv "N"))
         checkFromVariableUnify (sn 1.) (sn 1.)
@@ -88,7 +88,7 @@ module VariableUnifyTests =
         let changeVariable = getChangeVariableFunction "N" 10.
         let proc e =
             match e with
-            | (AnyTyped(TypedSNumber(SNumber(e1))), AnyTyped(TypedSNumber(SNumber(e2)))) -> e1 + e2
+            | (TypedTerm(TypedNumberTerm(NumberTerm(e1))), TypedTerm(TypedNumberTerm(NumberTerm(e2)))) -> e1 + e2
             | _ -> fail()
             
         VariableUnify.postUnifyBinaryExpression changeVariable proc (sn 10.) (sn 10.)
@@ -154,10 +154,10 @@ module SimpleTests =
     [<Test>]
     let testExecuteCalc() = 
         executeCalc (Value(CalcAny(sn 1.)))
-        |> check (SNumber(1.))
+        |> check (NumberTerm(1.))
 
         executeCalc (Plus(CalcAny(sn 1.), CalcAny(sn 1.)))
-        |> check (SNumber(2.))
+        |> check (NumberTerm(2.))
     
     [<Test>]
     let testExecuteExpression() = 
@@ -165,7 +165,7 @@ module SimpleTests =
     
         executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> sn 1.)
         |> check [EqExpr(sn 1., sn 1.)]
-        executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> AnyVariable(v))
+        executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> VariableTerm(v))
         |> check [EqExpr(sn 1., sn 1.)]
         executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
         |> check [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
@@ -202,16 +202,34 @@ module SimpleTests =
         solve(goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
         |> check [[sv "N2"; sv "N2"]]
 
-        let pseudoFactorialRule = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), AndExpression(GrExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 2.))))
-        solve (goal("f1", [sna 1.; va "Res"])) [pseudoFactorialRule]
+        let oneOrTwoRule = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), AndExpression(GrExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 2.))))
+        solve (goal("f1", [sna 1.; va "Res"])) [oneOrTwoRule]
         |> check [[sn 1.; sn 1.]]
-        solve (goal("f1", [sna 3.; va "Res"])) [pseudoFactorialRule]
+        solve (goal("f1", [sna 3.; va "Res"])) [oneOrTwoRule]
         |> check [[sn 3.; sn 2.]]
 
         let getN = Rule(Signature("getn", [vp "R"]), EqExpr(sv "R", sn 1.))
-        let inn = Rule(Signature("inn", [vp "Res"]), CallExpression(Goal(Struct("getn", [sv "Res"]))))
+        let inn = Rule(Signature("inn", [vp "Res"]), CallExpression(Goal(Structure("getn", [sv "Res"]))))
         solve (goal("inn", [va "R"])) [getN; inn]
         |> check [[sn 1.]]
+        
+    [<Test>]
+    let factorialTest() =
+        let leftOr = AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.))
+        let rightOr = AndExpression(GrExpr(sv "N", sn 1.), AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N"))))))
+        let factorial = Rule(Signature("factorial", [vp "N"; vp "Res"]), OrExpression(leftOr, rightOr))
+
+        let knowledgebase = [
+            factorial
+        ]
+        
+        let checkf n =
+            let rec f x = if x = 1. then 1. else x * f(x - 1.)
+            
+            solve (goal("factorial", [sna n; va "Res"])) knowledgebase
+            |> check [[sn n; sn (f n)]]
+
+        [1..10] |> List.iter (float >> checkf)
 
 [<TestFixture>]
 module RuleTests =

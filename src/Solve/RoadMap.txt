@@ -5,9 +5,8 @@
 * Standard library
 * Wild card
 
-Check on:
+Check:
 * Do we need not executed expression?
-* Return values from complex expressions like (and(or(and)))
 
 Currently support:
 * Basic rules
@@ -17,3 +16,4 @@ Currently support:
 * Strings and lists
 * Custom calls
 * Temporary variables
+* Recursive calls

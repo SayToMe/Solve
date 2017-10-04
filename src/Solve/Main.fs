@@ -1,7 +1,7 @@
 ﻿namespace Solve
 
-open Types
-open Types.Transformers
+open TermTypes
+open TermTypes.Transformers
 
 open Rule
 open Rule.Transformers
@@ -11,8 +11,7 @@ open Execute
 
 module Solve =
     let rec solve goal knowledgeBase =
-        let checkAppliable goal (Rule(Signature(ruleName, ruleParams), _)) =
-            let (Goal(Struct(name, goalArguments))) = goal
+        let checkAppliable (Goal(Structure(name, goalArguments))) (Rule(Signature(ruleName, ruleParams), _)) =
             let arguments = toArgs goalArguments
             name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
 

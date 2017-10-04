@@ -2,15 +2,15 @@
 
 open System.Diagnostics
 
-module Types =
+module TermTypes =
     [<AutoOpen>]
     module Concrete =
-        type SBool = SBool of bool
-        type SNumber = SNumber of double
-        type SChar = SChar of char
+        type BoolTerm = BoolTerm of bool
+        type NumberTerm = NumberTerm of double
+        type CharTerm = CharTerm of char
     
-        type SList = SList of list<Typed>
-        and Typed = TypedSBool of SBool | TypedSNumber of SNumber | TypedSChar of SChar | TypedSList of SList
+        type ListTerm = ListTerm of list<TypedTerm>
+        and TypedTerm = TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm | TypedListTerm of ListTerm
 
     [<AutoOpen>]
     module Variable =
@@ -18,39 +18,33 @@ module Types =
         type Variable = Variable of string
         
     [<StructuredFormatDisplay("{AsString}")>]
-    type Any = AnyVariable of Variable | AnyTyped of Typed | AnyStruct of Struct
+    type Term = VariableTerm of Variable | TypedTerm of TypedTerm | StructureTerm of Structure
         with
         member a.AsString =
             match a with
-            | AnyVariable(Variable(v)) -> "~" + v + "~"
-            | AnyTyped(typed) ->
+            | VariableTerm(Variable(v)) -> "~" + v + "~"
+            | TypedTerm(typed) ->
                 let rec formatTyped = function
-                                      | TypedSBool(SBool v) -> v.ToString()
-                                      | TypedSNumber(SNumber v) -> v.ToString()
-                                      | TypedSChar(SChar v) -> v.ToString()
-                                      | TypedSList(SList v) when List.forall (function | TypedSChar (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
-                                      | TypedSList(SList v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
+                                      | TypedBoolTerm(BoolTerm v) -> v.ToString()
+                                      | TypedNumberTerm(NumberTerm v) -> v.ToString()
+                                      | TypedCharTerm(CharTerm v) -> v.ToString()
+                                      | TypedListTerm(ListTerm v) when List.forall (function | TypedCharTerm (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
+                                      | TypedListTerm(ListTerm v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
                 formatTyped typed
-            | AnyStruct(Struct(functor, parameters)) -> functor + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
-    and Struct = Struct of string * Any list
+            | StructureTerm(Structure(functor, parameters)) -> functor + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
+    and Structure = Structure of string * Term list
 
     module Transformers =
         [<DebuggerStepThrough>]
-        let sbool = SBool >> TypedSBool
-        [<DebuggerStepThrough>]
-        let strue = sbool true
-        [<DebuggerStepThrough>]
-        let sfalse = sbool false
+        let bool = BoolTerm >> TypedBoolTerm >> TypedTerm
 
         [<DebuggerStepThrough>]
-        let snum = SNumber >> TypedSNumber
-        [<DebuggerStepThrough>]
-        let snum1 = snum 1.
+        let num = NumberTerm >> TypedNumberTerm >> TypedTerm
 
         [<DebuggerStepThrough>]
-        let schar = SChar >> TypedSChar
+        let char = CharTerm >> TypedCharTerm >> TypedTerm
         [<DebuggerStepThrough>]
-        let sstring v = TypedSChar <| SChar v
+        let string = CharTerm >> TypedCharTerm >> TypedTerm
         
         [<DebuggerStepThrough>]
-        let variable = Variable >> AnyVariable
+        let var = Variable >> VariableTerm
