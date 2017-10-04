@@ -9,9 +9,19 @@ open VariableUnify
 open ExpressionUnify
 
 module Execute =
-    let executeCalc =
+    let rec executeCalc =
         function
         | Value (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm v1
+        | Value (CalcAny(StructureTerm(Structure(functor, args)))) ->
+            match functor with
+            | "+" when args.Length = 2 -> executeCalc (Plus(CalcAny(args.[0]), CalcAny(args.[1])))
+            | "-" when args.Length = 2 -> executeCalc (Subsctruct(CalcAny(args.[0]), CalcAny(args.[1])))
+            | "*" when args.Length = 2 -> executeCalc (Multiply(CalcAny(args.[0]), CalcAny(args.[1])))
+            | "/" when args.Length = 2 -> executeCalc (Division(CalcAny(args.[0]), CalcAny(args.[1])))
+            | "-" when args.Length = 1 -> executeCalc (Invert(CalcAny(args.[0])))
+            | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(CalcAny(args.[0])))
+            | "log" when args.Length = 2 -> executeCalc (Log(CalcAny(args.[0]), CalcAny(args.[1])))
+            | _ -> failwith "Cant find according calc functor"
         | Plus (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 + v2
         | Subsctruct (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 - v2
         | Multiply (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 * v2

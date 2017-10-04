@@ -1,5 +1,4 @@
 ﻿To implement:
-* Calc calls by structs
 * Cuts
 * Not expression
 * Standard library
@@ -17,3 +16,4 @@ Currently support:
 * Custom calls
 * Temporary variables
 * Recursive calls
+* Calc calls by structs
