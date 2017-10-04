@@ -14,7 +14,14 @@ open Rule.Transformers
 [<DebuggerStepThrough>]
 let inline fail() = failwith ""
 [<DebuggerStepThrough>]
-let inline check (expected: 'a) (actual: 'a) = Assert.AreEqual(expected, actual)
+let inline check (expected: 'a) (actual: 'a) = 
+    Assert.AreEqual(expected, actual, sprintf "%O != %O" expected actual)
+[<DebuggerStepThrough>]
+let inline checkExecuteExpression expected actual =
+    check expected (Seq.toList actual)
+[<DebuggerStepThrough>]
+let inline checkSolve expected actual =
+    check expected (actual |> Seq.map (Seq.toList) |> Seq.toList)
 
 [<DebuggerStepThrough>]
 let sn x = TypedTerm(TypedNumberTerm(NumberTerm x))
@@ -164,57 +171,63 @@ module SimpleTests =
         let executeCustom a = failwith "unexpected input"
     
         executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> sn 1.)
-        |> check [EqExpr(sn 1., sn 1.)]
+        |> checkExecuteExpression [EqExpr(sn 1., sn 1.)]
         executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> VariableTerm(v))
-        |> check [EqExpr(sn 1., sn 1.)]
+        |> checkExecuteExpression [EqExpr(sn 1., sn 1.)]
         executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
-        |> check [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
+        |> checkExecuteExpression [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
 
     open Solve
 
     [<Test>]
     let testExecute() = 
         solve (goal("eq1", [va "N"])) [Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
-        |> check [[sn 1.]]
+        |> checkSolve [[sn 1.]]
 
         solve (goal("eq2", [sna 1.])) [Rule(Signature("eq2", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
-        |> check [[sn 1.]]
+        |> checkSolve [[sn 1.]]
 
         solve (goal("eq3", [sna 2.])) [Rule(Signature("eq3", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
-        |> check []
+        |> checkSolve []
             
         solve (goal("and", [va "N"])) [Rule(Signature("and", [vp "N"]), (AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
-        |> check []
+        |> checkSolve []
 
         solve (goal("or", [va "N"])) [Rule(Signature("or", [vp "N"]), (OrExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "N", sn 2.))))]
-        |> check [[sn 1.]; [sn 2.]]
+        |> checkSolve [[sn 1.]; [sn 2.]]
 
         solve (goal("fa", [va "N"])) [Rule(Signature("fa", [vp "N"]), (False))]
-        |> check []
+        |> checkSolve []
 
         solve (goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
-        |> check [[sn 1.]]
+        |> checkSolve [[sn 1.]]
 
         solve (goal("structure execute", [sna 2.; va "Res"])) [Rule(Signature("structure execute", [vp "N"; vp "R"]), CalcExpr(sv "R", Value(CalcAny(StructureTerm(Structure("+", [sv "N"; sn 1.]))))))]
-        |> check [[sn 2.; sn 3.]]
+        |> checkSolve [[sn 2.; sn 3.]]
+
+    [<Test>]
+    let checkLazySolve =
+        solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(CalcAny(sv "C"), CalcAny(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
+        |> Seq.take 10
+        |> checkSolve ([1..10] |> List.map (fun x -> [sn 1.; sn (float x)]))
 
     [<Test>]
     let realTest() =
         solve (goal("eq1_both", [va "N"; va "Res"])) [Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.))))))]
-        |> check [[sn 1.; sn 1.]]
+        |> checkSolve [[sn 1.; sn 1.]]
         solve(goal("eq", [va "N"; va "N2"])) [Rule(Signature("eq", [vp "N1"; vp "N2"]), (EqExpr(sv "N1", sv "N2")))]
-        |> check [[sv "N2"; sv "N2"]]
+        |> checkSolve [[sv "N2"; sv "N2"]]
 
         let oneOrTwoRule = Rule(Signature("f1", [vp "N"; vp "Res"]), OrExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), AndExpression(GrExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 2.))))
         solve (goal("f1", [sna 1.; va "Res"])) [oneOrTwoRule]
-        |> check [[sn 1.; sn 1.]]
+        |> checkSolve [[sn 1.; sn 1.]]
         solve (goal("f1", [sna 3.; va "Res"])) [oneOrTwoRule]
-        |> check [[sn 3.; sn 2.]]
+        |> checkSolve [[sn 3.; sn 2.]]
 
         let getN = Rule(Signature("getn", [vp "R"]), EqExpr(sv "R", sn 1.))
         let inn = Rule(Signature("inn", [vp "Res"]), CallExpression(Goal(Structure("getn", [sv "Res"]))))
         solve (goal("inn", [va "R"])) [getN; inn]
-        |> check [[sn 1.]]
+        |> checkSolve [[sn 1.]]
         
     [<Test>]
     let factorialTest() =
@@ -230,7 +243,7 @@ module SimpleTests =
             let rec f x = if x = 1. then 1. else x * f(x - 1.)
             
             solve (goal("factorial", [sna n; va "Res"])) knowledgebase
-            |> check [[sn n; sn (f n)]]
+            |> checkSolve [[sn n; sn (f n)]]
 
         [1..10] |> List.iter (float >> checkf)
 
@@ -256,22 +269,22 @@ module RuleTests =
     [<Test>]
     let testPersonRule() =
         solve (goal("person", [Argument(stringAny "Polina")])) knowledgebase
-        |> check [[stringAny "Polina"]]
+        |> checkSolve [[stringAny "Polina"]]
         solve (goal("person", [va "X"])) knowledgebase
-        |> check [[stringAny "Mary"]; [stringAny "Polina"]; [stringAny "Evgeniy"]; [stringAny "Solniwko"]]
+        |> checkSolve [[stringAny "Mary"]; [stringAny "Polina"]; [stringAny "Evgeniy"]; [stringAny "Solniwko"]]
         solve (goal("person", [Argument(stringAny "Miwa")])) knowledgebase
-        |> check []
+        |> checkSolve []
 
     [<Test>]
     let testParentRule() =
         solve (goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase
-        |> check [[stringAny "Polina"; stringAny "Evgeniy"]]
+        |> checkSolve [[stringAny "Polina"; stringAny "Evgeniy"]]
         solve (goal("parent", [va "Parent"; va "Descendant"])) knowledgebase
-        |> check [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
+        |> checkSolve [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
 
     [<Test>]
     let testGrandparentRule() =
         solve (goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase
-        |> check [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
+        |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
         solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
-        |> check [[stringAny "Mary"; stringAny "Evgeniy"]]
+        |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]]

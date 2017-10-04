@@ -17,6 +17,7 @@ module Solve =
 
         knowledgeBase
         |> List.filter (checkAppliable goal)
-        |> List.collect (fun r ->
+        |> List.toSeq
+        |> Seq.collect (fun r ->
             execute goal r (fun custom -> solve custom knowledgeBase)
         )

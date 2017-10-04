@@ -17,3 +17,4 @@ Currently support:
 * Temporary variables
 * Recursive calls
 * Calc calls by structs
+* Lazy execution
