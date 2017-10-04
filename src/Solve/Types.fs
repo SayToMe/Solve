@@ -10,7 +10,18 @@ module TermTypes =
         type CharTerm = CharTerm of char
     
         type ListTerm = ListTerm of list<TypedTerm>
-        and TypedTerm = TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm | TypedListTerm of ListTerm
+        and [<StructuredFormatDisplay("{AsString}")>] TypedTerm = TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm | TypedListTerm of ListTerm
+        with
+        member a.AsString =
+            let rec formatTyped =
+                function
+                | TypedBoolTerm(BoolTerm v) -> v.ToString()
+                | TypedNumberTerm(NumberTerm v) -> v.ToString()
+                | TypedCharTerm(CharTerm v) -> v.ToString()
+                | TypedListTerm(ListTerm v) when List.forall (function | TypedCharTerm (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
+                | TypedListTerm(ListTerm v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
+            formatTyped a
+        override a.ToString() = a.AsString
 
     [<AutoOpen>]
     module Variable =
@@ -23,15 +34,9 @@ module TermTypes =
         member a.AsString =
             match a with
             | VariableTerm(Variable(v)) -> "~" + v + "~"
-            | TypedTerm(typed) ->
-                let rec formatTyped = function
-                                      | TypedBoolTerm(BoolTerm v) -> v.ToString()
-                                      | TypedNumberTerm(NumberTerm v) -> v.ToString()
-                                      | TypedCharTerm(CharTerm v) -> v.ToString()
-                                      | TypedListTerm(ListTerm v) when List.forall (function | TypedCharTerm (_) -> true | _ -> false) v -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + formatTyped s) "" v) + "]"
-                                      | TypedListTerm(ListTerm v) -> "[" + (List.fold (fun acc s -> if acc = "" then formatTyped s else acc + ", " + formatTyped s) "" v) + "]"
-                formatTyped typed
+            | TypedTerm(typed) -> typed.AsString
             | StructureTerm(Structure(functor, parameters)) -> functor + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
+        override a.ToString() = a.AsString
     and Structure = Structure of string * Term list
 
     module Transformers =
