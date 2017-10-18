@@ -205,6 +205,10 @@ module SimpleTests =
         solve (goal("structure execute", [sna 2.; va "Res"])) [Rule(Signature("structure execute", [vp "N"; vp "R"]), CalcExpr(sv "R", Value(CalcAny(StructureTerm(Structure("+", [sv "N"; sn 1.]))))))]
         |> checkSolve [[sn 2.; sn 3.]]
 
+    let testCut() =
+        solve (goal("cut", [va "R"])) [Rule(Signature("cut", [vp "R"]), (AndExpression(OrExpression(EqExpr(sv "R", sn 1.), EqExpr(sv "R", sn 2.)), Cut)))]
+        |> checkSolve [[sn 1.]]
+
     [<Test>]
     let checkLazySolve =
         solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(CalcAny(sv "C"), CalcAny(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
@@ -245,7 +249,7 @@ module SimpleTests =
             solve (goal("factorial", [sna n; va "Res"])) knowledgebase
             |> checkSolve [[sn n; sn (f n)]]
 
-        [1..10] |> List.iter (float >> checkf)
+        [1] |> List.iter (float >> checkf)
 
 [<TestFixture>]
 module RuleTests =

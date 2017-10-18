@@ -33,6 +33,10 @@ module Execute =
 
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
+        let keepFirstCut exprs =
+            match Seq.tryFind (function | Cut -> true | _ -> false) exprs with
+            | Some v -> Seq.singleton v
+            | None -> exprs
         let changeIfVariable changeVariable =
             function
             | VariableTerm(v) -> changeVariable v
@@ -63,13 +67,14 @@ module Execute =
         match expr with
         | True -> Seq.singleton True
         | False -> Seq.empty
+        | Cut -> Seq.singleton Cut
         | NotExpression e -> Seq.map (NotExpression) (executeExpression e executeCustom changeVariableFn)
         | OrExpression (e1, e2) ->
-            let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2))
-            let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x)))
+            let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2)) |> keepFirstCut
+            let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x))) |> keepFirstCut
             Seq.append first second
         | AndExpression (e1, e2) ->
-            executeExpression e1 executeCustom changeVariableFn
+            executeExpression e1 executeCustom changeVariableFn |> keepFirstCut
             |> Seq.collect (fun _e1 ->
                 getChangedVariableFns e1 _e1
                 |> Seq.collect (fun fn ->
@@ -79,7 +84,7 @@ module Execute =
                     ffn
                     |> Seq.collect (fun fn ->
                         executeExpression _e2 executeCustom fn
-                        |> Seq.map (fun _e2res -> AndExpression(_e1, _e2res))
+                        |> Seq.map (fun _e2res -> AndExpression(_e1, _e2res)) |> keepFirstCut
                     )
                 )
             )
