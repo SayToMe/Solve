@@ -59,9 +59,7 @@ module NUnitExtensions =
         inherit TestActionAttribute()
         let mutable _timer = Stopwatch()
         let mutable _gcmem = 0L
-        let mutable _gc0 = 0
-        let mutable _gc1 = 0
-        let mutable _gc2 = 0
+        let mutable _gc = []
         
         override __.Targets = ActionTargets.Test
 
@@ -69,20 +67,19 @@ module NUnitExtensions =
             _timer.Start()
             GC.Collect()
             _gcmem <- GC.GetTotalMemory(true)
-            // gc executes one more time after starting no gc region
-            _gc0 <- GC.CollectionCount(0) + 1
-            _gc1 <- GC.CollectionCount(1) + 1
-            _gc2 <- GC.CollectionCount(2) + 1
+            // gc executes one or zero times after starting no gc region on a different systems
+            _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
+
             GC.TryStartNoGCRegion(1024L * 1024L * 100L, true) |> ignore
 
         override __.AfterTest test = 
             _timer.Stop()
             let gcm = GC.GetTotalMemory(false)
-            let gc0 = GC.CollectionCount(0)
-            let gc1 = GC.CollectionCount(1)
-            let gc2 = GC.CollectionCount(2)
+            
+            let gc = [0..2] |> List.map (fun i -> GC.CollectionCount(i))
+            let [gc0; gc1; gc2] = List.map2 (fun prev cur -> max (cur - prev) 0) _gc gc
 
-            let gcResult = sprintf "GC collects: %d %d %d Allocated: %d KB" (gc0 - _gc0) (gc1 - _gc1) (gc2 - _gc2) ((gcm - _gcmem) / 1024L)
+            let gcResult = sprintf "GC collects: %d %d %d Allocated: %d KB" gc0 gc1 gc2 ((gcm - _gcmem) / 1024L)
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
 
             Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
