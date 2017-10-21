@@ -71,7 +71,7 @@ module NUnitExtensions =
             _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
             try
-                GC.TryStartNoGCRegion(1024L * 1024L * 100L, true) |> ignore
+                GC.TryStartNoGCRegion(1024L * 1024L * 128L, true) |> ignore
             with
             | :? NotImplementedException as e -> ()
 
@@ -94,9 +94,9 @@ module NUnitExtensions =
 
 [<TestFixture>]
 module ReferenceTests =
-    [<Test; Report; Repeat(1000)>]
-    let ``reference test`` =
-        [1..100] |> List.fold (+) 0
+    [<Test; Report>]
+    let ``reference test``() =
+        [1..100] |> List.iter (fun _ -> [1..10000] |> List.fold (+) 0 |> fun x -> Assert.Greater(x, 0))
 
 [<TestFixture>]
 module VariableUnifyTests =
@@ -104,7 +104,7 @@ module VariableUnifyTests =
         function
         | Variable(v) when v = var -> sn n
         | v -> VariableTerm(v)
-        
+
     [<Test; Report>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
