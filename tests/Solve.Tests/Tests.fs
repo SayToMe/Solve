@@ -70,7 +70,10 @@ module NUnitExtensions =
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
-            GC.TryStartNoGCRegion(1024L * 1024L * 100L, true) |> ignore
+            try
+                GC.TryStartNoGCRegion(1024L * 1024L * 100L, true) |> ignore
+            with
+            | :? NotImplementedException as e -> ()
 
         override __.AfterTest test = 
             _timer.Stop()
@@ -83,8 +86,11 @@ module NUnitExtensions =
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
 
             Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
-
-            GC.EndNoGCRegion()
+            
+            try
+                GC.EndNoGCRegion()
+            with
+            | :? NotImplementedException as e -> ()
 
 [<TestFixture>]
 module VariableUnifyTests =
