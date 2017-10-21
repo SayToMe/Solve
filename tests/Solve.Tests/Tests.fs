@@ -93,6 +93,12 @@ module NUnitExtensions =
             | :? NotImplementedException as e -> ()
 
 [<TestFixture>]
+module ReferenceTests =
+    [<Test; Report; Repeat(1000)>]
+    let ``reference test`` =
+        [1..100] |> List.fold (+) 0
+
+[<TestFixture>]
 module VariableUnifyTests =
     let getChangeVariableFunction var n =
         function
