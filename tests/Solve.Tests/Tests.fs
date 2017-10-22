@@ -70,7 +70,10 @@ module NUnitExtensions =
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
-            GC.TryStartNoGCRegion(1024L * 1024L * 100L, true) |> ignore
+            try
+                GC.TryStartNoGCRegion(1024L * 1024L * 128L, true) |> ignore
+            with
+            | :? NotImplementedException as e -> ()
 
         override __.AfterTest test = 
             _timer.Stop()
@@ -83,8 +86,17 @@ module NUnitExtensions =
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
 
             Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
+            
+            try
+                GC.EndNoGCRegion()
+            with
+            | :? NotImplementedException as e -> ()
 
-            GC.EndNoGCRegion()
+[<TestFixture>]
+module ReferenceTests =
+    [<Test; Report>]
+    let ``reference test``() =
+        [1..100] |> List.iter (fun _ -> [1..10000] |> List.fold (+) 0 |> fun x -> Assert.Greater(x, 0))
 
 [<TestFixture>]
 module VariableUnifyTests =
@@ -92,7 +104,7 @@ module VariableUnifyTests =
         function
         | Variable(v) when v = var -> sn n
         | v -> VariableTerm(v)
-        
+
     [<Test; Report>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
