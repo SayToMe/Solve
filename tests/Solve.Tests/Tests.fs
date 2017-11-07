@@ -71,7 +71,7 @@ module NUnitExtensions =
             _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
             try
-                GC.TryStartNoGCRegion(1024L * 1024L * 128L, true) |> ignore
+                GC.TryStartNoGCRegion(1024L * 1024L * 240L, true) |> ignore
             with
             | :? NotImplementedException as e -> ()
 
@@ -253,6 +253,16 @@ module SimpleTests =
         |> checkSolve [[sn 2.; sn 3.]]
 
     [<Test; Report>]
+    let testCut() =
+        solve (goal("cut", [va "R"])) [Rule(Signature("cut", [vp "R"]), (AndExpression(OrExpression(EqExpr(sv "R", sn 1.), EqExpr(sv "R", sn 2.)), Cut)))]
+        |> checkSolve [[sn 1.]]
+
+    [<Test; Report>]
+    let testComplexCut() =
+        solve (goal("cut", [va "R1"; va "R2"])) [Rule(Signature("cut", [vp "R1"; vp "R2"]), (AndExpression(AndExpression(OrExpression(EqExpr(sv "R1", sn 1.), EqExpr(sv "R1", sn 2.)), OrExpression(EqExpr(sv "R2", sn 1.), EqExpr(sv "R2", sn 2.))), Cut)))]
+        |> checkSolve [[sn 1.; sn 1.]]
+
+    [<Test; Report>]
     let checkLazySolve =
         solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(CalcAny(sv "C"), CalcAny(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
         |> Seq.take 10
@@ -280,6 +290,24 @@ module SimpleTests =
     let factorialTest() =
         let leftOr = AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.))
         let rightOr = AndExpression(GrExpr(sv "N", sn 1.), AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N"))))))
+        let factorial = Rule(Signature("factorial", [vp "N"; vp "Res"]), OrExpression(leftOr, rightOr))
+
+        let knowledgebase = [
+            factorial
+        ]
+        
+        let checkf n =
+            let rec f x = if x = 1. then 1. else x * f(x - 1.)
+            
+            solve (goal("factorial", [sna n; va "Res"])) knowledgebase
+            |> checkSolve [[sn n; sn (f n)]]
+
+        [1..10] |> List.iter (float >> checkf)
+        
+    [<Test; Report>]
+    let cutFactorialTest() =
+        let leftOr = AndExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), Cut)
+        let rightOr = AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N")))))
         let factorial = Rule(Signature("factorial", [vp "N"; vp "Res"]), OrExpression(leftOr, rightOr))
 
         let knowledgebase = [
