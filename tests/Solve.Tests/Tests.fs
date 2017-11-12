@@ -57,6 +57,7 @@ module NUnitExtensions =
 
     type ReportAttribute() =
         inherit TestActionAttribute()
+        
         let mutable _timer = Stopwatch()
         let mutable _gcmem = 0L
         let mutable _gc = []
@@ -64,20 +65,17 @@ module NUnitExtensions =
         override __.Targets = ActionTargets.Test
 
         override __.BeforeTest test = 
+            System.AppDomain.MonitoringIsEnabled <- true
+
             _timer.Start()
             GC.Collect()
-            _gcmem <- GC.GetTotalMemory(true)
+            _gcmem <- AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
-            try
-                GC.TryStartNoGCRegion(1024L * 1024L * 128L, true) |> ignore
-            with
-            | :? NotImplementedException as e -> ()
-
         override __.AfterTest test = 
             _timer.Stop()
-            let gcm = GC.GetTotalMemory(false)
+            let gcm = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
             
             let gc = [0..2] |> List.map (fun i -> GC.CollectionCount(i))
             let [gc0; gc1; gc2] = List.map2 (fun prev cur -> max (cur - prev) 0) _gc gc
@@ -86,11 +84,6 @@ module NUnitExtensions =
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
 
             Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
-            
-            try
-                GC.EndNoGCRegion()
-            with
-            | :? NotImplementedException as e -> ()
 
 [<TestFixture>]
 module ReferenceTests =
@@ -335,3 +328,23 @@ module RuleTests =
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
         solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]]
+
+    [<Test; ReportAttribute>]
+    let bigTest() =
+        let r = System.Random()
+        let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person
+        let gerRuleName (Rule(Signature(name, _), _)) = name
+        let rec generate genFn =
+            let pi = r.Next(persons.Length)
+            let ci = r.Next(persons.Length)
+            if pi = ci then
+                generate genFn
+            else
+                genFn (gerRuleName persons.[pi]) (gerRuleName persons.[ci])
+
+        let parents = [1..1000] |> List.map (fun i -> generate parent)
+        let kb = persons @ parents
+
+        let toTest = [1..10000] |> List.map (fun i -> generate (fun p c -> (goal("parent", [va p; va c]))))
+
+        toTest |> List.map (fun t -> solve t kb |> Seq.toList) |> ignore
