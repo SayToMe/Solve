@@ -30,6 +30,7 @@ module ExpressionUnify =
         match expression with
         | True -> True
         | False -> False
+        | Cut -> Cut
         | NotExpression e -> NotExpression (unifyExpression e changeVariable)
         | OrExpression (e1, e2) -> OrExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
         | AndExpression (e1, e2) -> AndExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
@@ -61,6 +62,7 @@ module ExpressionUnify =
             match (initialExpression, expression) with
             | (True, True) -> changedVariableFns
             | (False, False) -> changedVariableFns
+            | (Cut, Cut) -> changedVariableFns
             | (_, NotExecuted _) -> changedVariableFns
             | (NotExpression e1, NotExpression e2) -> _getChangedVariableFn e1 e2 changedVariableFns
             | (OrExpression(e1, e2), OrExpression(e3, e4)) ->
@@ -110,6 +112,7 @@ module ExpressionUnify =
         match (initialExpression, expression) with
         | (True, True) -> arguments
         | (False, False) -> []
+        | (Cut, Cut) -> arguments
         | (_, NotExecuted _) -> arguments
         | (NotExpression e1, NotExpression e2) -> unifyBack arguments e1 e2
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4

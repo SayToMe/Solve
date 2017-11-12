@@ -29,6 +29,7 @@ module Rule =
     type Expression =
         | True
         | False
+        | Cut
         | NotExecuted of Expression
         | NotExpression of Expression
         | OrExpression of Expression * Expression

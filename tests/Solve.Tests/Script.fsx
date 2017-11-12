@@ -2,7 +2,3 @@
 #r "bin/Debug/Solve.dll"
 
 #load "Tests.fs"
-
-open Solve.Tests
-
-RuleTests.bigTest()

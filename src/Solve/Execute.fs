@@ -33,6 +33,27 @@ module Execute =
 
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
+        let keepOnlyFirstCut exprs =
+            let rec exprHasCut e =
+                match e with
+                | Cut -> true
+                | AndExpression(e1, e2) -> exprHasCut e1 || exprHasCut e2
+                | OrExpression(e1, e2) -> exprHasCut e1 || exprHasCut e2
+                | NotExpression(e) -> exprHasCut e
+                | _ -> false
+
+            Seq.unfold (fun seq ->
+                if Seq.isEmpty seq then
+                    None
+                else
+                    let head = Seq.head seq
+                    let tail = Seq.tail seq
+
+                    if exprHasCut head then
+                        Some(head, Seq.empty)
+                    else
+                        Some(head, tail)
+            ) exprs
         let changeIfVariable changeVariable =
             function
             | VariableTerm(v) -> changeVariable v
@@ -63,26 +84,35 @@ module Execute =
         match expr with
         | True -> Seq.singleton True
         | False -> Seq.empty
+        | Cut -> Seq.singleton Cut
         | NotExpression e -> Seq.map (NotExpression) (executeExpression e executeCustom changeVariableFn)
         | OrExpression (e1, e2) ->
             let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2))
             let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x)))
-            Seq.append first second
+            
+            Seq.append first second |> keepOnlyFirstCut
         | AndExpression (e1, e2) ->
-            executeExpression e1 executeCustom changeVariableFn
-            |> Seq.collect (fun _e1 ->
-                getChangedVariableFns e1 _e1
-                |> Seq.collect (fun fn ->
-                    let _e2 = unifyExpression e2 fn
-                    let ffn = getChangedVariableFns e2 _e2
+            let executed1 = executeExpression e1 executeCustom changeVariableFn
 
-                    ffn
+            match e2 with
+            | Cut -> Seq.truncate 1 executed1 |> Seq.map (fun e1res -> AndExpression(e1res, e2))
+            | _ ->
+                executed1
+                |> Seq.collect (fun _e1 ->
+                    let fixChangedVariables1 =  getChangedVariableFns e1 _e1
+
+                    fixChangedVariables1
                     |> Seq.collect (fun fn ->
-                        executeExpression _e2 executeCustom fn
-                        |> Seq.map (fun _e2res -> AndExpression(_e1, _e2res))
+                        let _e2 = unifyExpression e2 fn
+                        let fixChangedVariables2 = getChangedVariableFns e2 _e2
+
+                        fixChangedVariables2
+                        |> Seq.collect (fun fn ->
+                            executeExpression _e2 executeCustom fn
+                            |> Seq.map (fun _e2res -> AndExpression(_e1, _e2res))
+                        )
                     )
                 )
-            )
         | ResultExpression e -> Seq.singleton (ResultExpression e)
         | CallExpression goal ->
             let (Goal(Structure(goalSign, _))) = goal
