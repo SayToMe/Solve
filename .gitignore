@@ -184,3 +184,9 @@ docsrc/content/license.md
 docsrc/content/release-notes.md
 .fake
 docsrc/tools/FSharp.Formatting.svclog
+.idea/.idea.Solve/.idea/contentModel.xml
+.idea/.idea.Solve/.idea/indexLayout.xml
+.idea/.idea.Solve/.idea/modules.xml
+.idea/.idea.Solve/.idea/vcs.xml
+.idea/.idea.Solve/.idea/workspace.xml
+.idea/.idea.Solve/riderModule.iml
