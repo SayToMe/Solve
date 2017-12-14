@@ -35,7 +35,7 @@ module TermTypes =
             match a with
             | VariableTerm(Variable(v)) -> "~" + v + "~"
             | TypedTerm(typed) -> typed.AsString
-            | StructureTerm(Structure(functor, parameters)) -> functor + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
+            | StructureTerm(Structure(functor', parameters)) -> functor' + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
         override a.ToString() = a.AsString
     and Structure = Structure of string * Term list
 

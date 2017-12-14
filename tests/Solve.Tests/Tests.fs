@@ -55,39 +55,70 @@ let goal (name, args) = Goal(Structure(name, fromArgs args))
 module NUnitExtensions =
     open System
 
-    type ReportAttribute() =
+    type MemoryUnit = | Gb | Mb | Kb | B
+        with
+        member self.calculate (num: int64) =
+            let num = float num
+
+            match self with
+            | B -> num
+            | Kb -> num / 1024.
+            | Mb -> num / 1024. / 1024.
+            | Gb -> num / 1024. / 1024. / 1024.
+        static member SmartCalculate (num: int64) =
+            let gbs = Gb.calculate num
+            let mbs = Mb.calculate num
+            let kbs = Kb.calculate num
+            if gbs > 1. then
+                sprintf "%f GB" gbs
+            elif mbs > 1. then
+                sprintf "%f MB" mbs
+            elif kbs > 1. then
+                sprintf "%f KB" kbs
+            else
+                sprintf "%d B" num
+
+    type MemoryReportAttribute() =
         inherit TestActionAttribute()
         
         let mutable _timer = Stopwatch()
         let mutable _gcmem = 0L
         let mutable _gc = []
         
+        let trackedGcCollections = [0..2]
+
         override __.Targets = ActionTargets.Test
 
-        override __.BeforeTest test = 
-            System.AppDomain.MonitoringIsEnabled <- true
+        override __.BeforeTest test =
+            try
+                System.AppDomain.MonitoringIsEnabled <- true
+            with
+            | _ -> ()
 
             _timer.Start()
             GC.Collect()
             _gcmem <- AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
             // gc executes one or zero times after starting no gc region on a different systems
-            _gc <- [0..2] |> List.map (fun i -> GC.CollectionCount(i) + 1)
+            _gc <- trackedGcCollections |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
         override __.AfterTest test = 
             _timer.Stop()
             let gcm = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
             
-            let gc = [0..2] |> List.map (fun i -> GC.CollectionCount(i))
-            let [gc0; gc1; gc2] = List.map2 (fun prev cur -> max (cur - prev) 0) _gc gc
+            let gcCollects =
+                trackedGcCollections
+                |> List.map (fun i -> GC.CollectionCount(i))
+                |> List.map2 (fun prev cur -> max (cur - prev) 0) _gc
+                |> List.fold (fun acc c -> acc + c.ToString() + " ") ""
 
-            let gcResult = sprintf "GC collects: %d %d %d Allocated: %d KB" gc0 gc1 gc2 ((gcm - _gcmem) / 1024L)
+            let gcResult = sprintf "GC collects: %s Allocated: %s" gcCollects (MemoryUnit.SmartCalculate ((gcm - _gcmem) / 1024L))
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
 
             Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
 
 [<TestFixture>]
 module ReferenceTests =
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``reference test``() =
         [1..100] |> List.iter (fun _ -> [1..10000] |> List.fold (+) 0 |> fun x -> Assert.Greater(x, 0))
 
@@ -98,13 +129,13 @@ module VariableUnifyTests =
         | Variable(v) when v = var -> sn n
         | v -> VariableTerm(v)
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
         VariableUnify.processStruct changeVariable (Structure("test", [sv "N1"; sv "N"; sv "N"]))
         |> check (Structure("test", [sv "N1"; sn 1.; sn 1.]))
         
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``unify two any test``() =
         let checkFromVariableUnify a b =
             VariableUnify.unifyTwoAny a b |> check (Some b)
@@ -117,7 +148,7 @@ module VariableUnifyTests =
         checkFromVariableUnify (sn 1.) (sn 1.)
         VariableUnify.unifyTwoAny (sn 1.) (sn 2.) |> check None
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``post unify unary expressions``() =
         let changeVariable = getChangeVariableFunction "N" 10.
         
@@ -130,7 +161,7 @@ module VariableUnifyTests =
         VariableUnify.postUnifyUnaryExpressions (sv "N") (sv "N2") changeVariable (Variable("N"))
         |> check (sv "N2")
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``post unify binary expression test``() =
         let changeVariable = getChangeVariableFunction "N" 10.
         let proc e =
@@ -145,7 +176,7 @@ module VariableUnifyTests =
         VariableUnify.postUnifyBinaryExpression changeVariable proc (sn 10.) (sv "N")
         |> check 20.
         
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``post unify binary expressions test``() =
         let changeVariable = getChangeVariableFunction "N" 10.
         
@@ -162,7 +193,7 @@ module VariableUnifyTests =
         VariableUnify.postUnifyBinaryExpressions (sn 10., sv "N") (sn 5., sv "N2") changeVariable (Variable("N"))
         |> check (sv "N2")
         
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let ``post unify params with arguments test3``() =
         VariableUnify.unifyParamsWithArguments [snp 10.; snp 5.; vp "V"] [sna 10.; sna 5.; va "V"]
         |> check (Some([sn 10.; sn 5.; sv "V"]))
@@ -182,7 +213,7 @@ module SimpleTests =
     open VariableUnify
     open ExpressionUnify
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testUnifyExpression() = 
         unifyExpression (EqExpr(sv "N", sn 1.)) (fun (Variable(v)) -> sn 1.)
         |> check (EqExpr(sn 1., sn 1.))
@@ -191,14 +222,14 @@ module SimpleTests =
         unifyExpression (EqExpr(sv "N", sv "N2")) (fun (Variable(v)) -> if v = "N" then sn 1. else sv v)
         |> check (EqExpr(sn 1., sv "N2"))
     
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testUnifyRule() = 
         unifyRule (Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))) [sna 1.]
         |> check (Some(Rule(Signature("eq1", [snp 1.]), (EqExpr(sn 1., sn 1.)))))
     
     open Execute
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testExecuteCalc() = 
         executeCalc (Value(CalcAny(sn 1.)))
         |> check (NumberTerm(1.))
@@ -206,7 +237,7 @@ module SimpleTests =
         executeCalc (Plus(CalcAny(sn 1.), CalcAny(sn 1.)))
         |> check (NumberTerm(2.))
     
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testExecuteExpression() = 
         let executeCustom a = failwith "unexpected input"
     
@@ -219,7 +250,7 @@ module SimpleTests =
 
     open Solve
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testExecute() = 
         solve (goal("eq1", [va "N"])) [Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))]
         |> checkSolve [[sn 1.]]
@@ -245,23 +276,23 @@ module SimpleTests =
         solve (goal("structure execute", [sna 2.; va "Res"])) [Rule(Signature("structure execute", [vp "N"; vp "R"]), CalcExpr(sv "R", Value(CalcAny(StructureTerm(Structure("+", [sv "N"; sn 1.]))))))]
         |> checkSolve [[sn 2.; sn 3.]]
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testCut() =
         solve (goal("cut", [va "R"])) [Rule(Signature("cut", [vp "R"]), (AndExpression(OrExpression(EqExpr(sv "R", sn 1.), EqExpr(sv "R", sn 2.)), Cut)))]
         |> checkSolve [[sn 1.]]
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let testComplexCut() =
         solve (goal("cut", [va "R1"; va "R2"])) [Rule(Signature("cut", [vp "R1"; vp "R2"]), (AndExpression(AndExpression(OrExpression(EqExpr(sv "R1", sn 1.), EqExpr(sv "R1", sn 2.)), OrExpression(EqExpr(sv "R2", sn 1.), EqExpr(sv "R2", sn 2.))), Cut)))]
         |> checkSolve [[sn 1.; sn 1.]]
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let checkLazySolve =
         solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(CalcAny(sv "C"), CalcAny(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
         |> Seq.take 10
         |> checkSolve ([1..10] |> List.map (fun x -> [sn 1.; sn (float x)]))
 
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let realTest() =
         solve (goal("eq1_both", [va "N"; va "Res"])) [Rule(Signature("eq1_both", [vp "N1"; vp "N2"]), (AndExpression((EqExpr(sv "N1", sn 1.), (EqExpr(sv "N2", sn 1.))))))]
         |> checkSolve [[sn 1.; sn 1.]]
@@ -279,7 +310,7 @@ module SimpleTests =
         solve (goal("inn", [va "R"])) [getN; inn]
         |> checkSolve [[sn 1.]]
         
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let factorialTest() =
         let leftOr = AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.))
         let rightOr = AndExpression(GrExpr(sv "N", sn 1.), AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N"))))))
@@ -297,7 +328,7 @@ module SimpleTests =
 
         [1..10] |> List.iter (float >> checkf)
         
-    [<Test; Report>]
+    [<Test; MemoryReport>]
     let cutFactorialTest() =
         let leftOr = AndExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), Cut)
         let rightOr = AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N")))))
@@ -335,8 +366,8 @@ module RuleTests =
         grandparent
         notParent
     ]
-    
-    [<Test; Report>]
+
+    [<Test; MemoryReport>]
     let testPersonRule() =
         solve (goal("person", [Argument(stringAny "Polina")])) knowledgebase
         |> checkSolve [[stringAny "Polina"]]
@@ -344,15 +375,15 @@ module RuleTests =
         |> checkSolve [[stringAny "Mary"]; [stringAny "Polina"]; [stringAny "Evgeniy"]; [stringAny "Solniwko"]]
         solve (goal("person", [Argument(stringAny "Miwa")])) knowledgebase
         |> checkSolve []
-        
-    [<Test; Report>]
+
+    [<Test; MemoryReport>]
     let testParentRule() =
         solve (goal("parent", [Argument(stringAny "Polina"); va "Descendant"])) knowledgebase
         |> checkSolve [[stringAny "Polina"; stringAny "Evgeniy"]]
         solve (goal("parent", [va "Parent"; va "Descendant"])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
-
-    [<Test; Report>]
+        
+    [<Test; MemoryReport>]
     let testNotParentRule() =
         solve (goal("notParent", [va "NotParent"])) knowledgebase
         |> checkSolve [[stringAny "Evgeniy"]]
@@ -360,14 +391,14 @@ module RuleTests =
         solve (goal("notParent", [Argument(stringAny "Mary")])) knowledgebase
         |> checkSolve []
 
-    [<Test; ReportAttribute>]
+    [<Test; MemoryReport>]
     let testGrandparentRule() =
         solve (goal("grandparent", [va "GrandParent"; va "Descendant"])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Evgeniy"]]
         solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]]
 
-    [<Test; ReportAttribute>]
+    [<Test; MemoryReport>]
     let bigTest() =
         let r = System.Random()
         let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person
