@@ -319,7 +319,7 @@ module SimpleTests =
 module RuleTests =
     let person p = Rule(Signature("person", [Parameter(stringAny p)]), True)
     let parent p d = Rule(Signature("parent", [Parameter(stringAny p); Parameter(stringAny d)]), True)
-    let notParent = Rule(Signature("notParent", [vp "P"]), AndExpression(CallExpression(goal("person", [va "P"])), AndExpression(CallExpression(goal("person", [va "C"])), NotExpression(CallExpression(goal("parent", [va "P"; va "C"]))))))
+    let notParent = Rule(Signature("notParent", [vp "P"]), AndExpression(CallExpression(goal("person", [va "P"])), NotExpression(AndExpression(CallExpression(goal("person", [va "C"])), CallExpression(goal("parent", [va "P"; va "C"]))))))
     let grandparent = Rule(Signature("grandparent", [vp "G"; vp "D"]), AndExpression(CallExpression(goal("parent", [va "G"; va "P"])), CallExpression(goal("parent", [va "P"; va "D"]))))
 
     let knowledgebase = [
@@ -332,6 +332,7 @@ module RuleTests =
         parent "Solniwko" "Polina";
         parent "Polina" "Evgeniy";
 
+        grandparent
         notParent
     ]
     
@@ -357,7 +358,7 @@ module RuleTests =
         |> checkSolve [[stringAny "Evgeniy"]]
 
         solve (goal("notParent", [Argument(stringAny "Mary")])) knowledgebase
-        |> checkSolve [[]]
+        |> checkSolve []
 
     [<Test; ReportAttribute>]
     let testGrandparentRule() =

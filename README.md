@@ -11,10 +11,10 @@ This library is an educational presentation of language Prolog in a sweet syntax
 * Recursive calls
 * Calc calls by structs
 * Lazy execution
+* Cut operator
+* Not operator
 
 Features are going to be implemented:
-* Cuts
-* Not expression
 * Standard library
 * Wild card
 
