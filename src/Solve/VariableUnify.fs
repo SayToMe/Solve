@@ -5,12 +5,12 @@ open TermTypes
 open Rule
 
 module VariableUnify =
-    let processStruct changeVariable (Structure(functor, prms)) =
+    let processStruct changeVariable (Structure(functor', prms)) =
         let changeIfVariable =
             function
             | VariableTerm(v) -> changeVariable v
             | a -> a
-        Structure(functor, prms |> List.map changeIfVariable)
+        Structure(functor', prms |> List.map changeIfVariable)
 
     let rec unifyTwoAny v1 v2 =
         match (v1, v2) with
@@ -35,14 +35,14 @@ module VariableUnify =
         else 
             fn v
 
-    let postUnifyBinaryExpression proc functor e1 e2 =
+    let postUnifyBinaryExpression proc functor' e1 e2 =
         match (e1, e2) with
-        | (VariableTerm(v1), VariableTerm(v2)) -> functor(proc v1, proc v2)
-        | (VariableTerm(v1), TypedTerm(_)) -> functor(proc v1, e2)
-        | (VariableTerm(v1), StructureTerm(v2)) -> functor(proc v1, StructureTerm(processStruct proc v2))
-        | (TypedTerm(_), VariableTerm(v2)) -> functor(e1, proc v2)
-        | (StructureTerm(v1), VariableTerm(v2)) -> functor(StructureTerm(processStruct proc v1), proc v2)
-        | _ -> functor(e1, e2)
+        | (VariableTerm(v1), VariableTerm(v2)) -> functor'(proc v1, proc v2)
+        | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, e2)
+        | (VariableTerm(v1), StructureTerm(v2)) -> functor'(proc v1, StructureTerm(processStruct proc v2))
+        | (TypedTerm(_), VariableTerm(v2)) -> functor'(e1, proc v2)
+        | (StructureTerm(v1), VariableTerm(v2)) -> functor'(StructureTerm(processStruct proc v1), proc v2)
+        | _ -> functor'(e1, e2)
 
     let postUnifyBinaryExpressions (v1, v2) (v3, v4) fn v =
         if VariableTerm(v) = v1 then

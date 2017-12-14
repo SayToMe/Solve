@@ -12,8 +12,8 @@ module Execute =
     let rec executeCalc =
         function
         | Value (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm v1
-        | Value (CalcAny(StructureTerm(Structure(functor, args)))) ->
-            match functor with
+        | Value (CalcAny(StructureTerm(Structure(functor', args)))) ->
+            match functor' with
             | "+" when args.Length = 2 -> executeCalc (Plus(CalcAny(args.[0]), CalcAny(args.[1])))
             | "-" when args.Length = 2 -> executeCalc (Subsctruct(CalcAny(args.[0]), CalcAny(args.[1])))
             | "*" when args.Length = 2 -> executeCalc (Multiply(CalcAny(args.[0]), CalcAny(args.[1])))
@@ -21,7 +21,7 @@ module Execute =
             | "-" when args.Length = 1 -> executeCalc (Invert(CalcAny(args.[0])))
             | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(CalcAny(args.[0])))
             | "log" when args.Length = 2 -> executeCalc (Log(CalcAny(args.[0]), CalcAny(args.[1])))
-            | _ -> failwith "Cant find according calc functor"
+            | _ -> failwith "Cant find according calc functor'"
         | Plus (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 + v2
         | Subsctruct (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 - v2
         | Multiply (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 * v2
@@ -58,26 +58,26 @@ module Execute =
             function
             | VariableTerm(v) -> changeVariable v
             | a -> a
-        let executeBinaryExpression functor condition e1 e2 =
+        let executeBinaryExpression functor' condition e1 e2 =
             // Hack for equality check
             let conditionIsEquality = condition (TypedNumberTerm(NumberTerm(1.))) (TypedNumberTerm(NumberTerm(1.)))
 
             let e1 = changeIfVariable changeVariableFn e1
             let e2 = changeIfVariable changeVariableFn e2
             match (e1, e2) with
-            | (VariableTerm(_), VariableTerm(_)) -> Seq.singleton (functor(e2, e2))
-            | (VariableTerm(_), TypedTerm(_)) -> Seq.singleton (functor(e2, e2))
-            | (VariableTerm(_), StructureTerm(_)) -> Seq.singleton (functor(e2, e2))
-            | (TypedTerm(_), VariableTerm(_)) -> Seq.singleton (functor(e1, e1))
-            | (StructureTerm(_), VariableTerm(_)) -> Seq.singleton (functor(e1, e1))
+            | (VariableTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e2, e2))
+            | (VariableTerm(_), TypedTerm(_)) -> Seq.singleton (functor'(e2, e2))
+            | (VariableTerm(_), StructureTerm(_)) -> Seq.singleton (functor'(e2, e2))
+            | (TypedTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e1, e1))
+            | (StructureTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e1, e1))
             | (TypedTerm(v1), TypedTerm(v2)) ->
                 if condition v1 v2 then
-                    Seq.singleton (functor(e1, e2))
+                    Seq.singleton (functor'(e1, e2))
                 else
                     Seq.empty
             | (StructureTerm(s1), StructureTerm(s2)) ->
                 if conditionIsEquality && s1 = s2 then
-                    Seq.singleton (functor(e1, e2))
+                    Seq.singleton (functor'(e1, e2))
                 else
                     Seq.empty
             | _ -> failwith "unexpected execute binary expression arguments"
