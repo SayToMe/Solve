@@ -11,4 +11,15 @@ open Rule.Transformers
 
 [<EntryPoint>]
 let main argv = 
+    let i = Solve.Interactive()
+
+    let mutable input = System.Console.ReadLine()
+    while input <> "exit" do
+        try
+            i.NewInput input |> printfn "%d"
+        with
+        | _ as e -> printfn "Failed to parse previous input"
+
+        input <- System.Console.ReadLine()
+
     0 // return an integer exit code
