@@ -17,7 +17,6 @@ let int = ['-' '+']? ['0'-'9']+
 let digit = ['0'-'9']
 let frac = '.' digit*
 let exp = ['e' 'E'] ['-' '+']? digit+
-let float = '-'? digit* frac? exp?
 
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
@@ -27,17 +26,21 @@ rule read =
   | white    { read lexbuf }
   | newline  { newline lexbuf; read lexbuf }
   | int      { INT (int (lexeme lexbuf)) }
-  | float    { FLOAT (float (lexeme lexbuf)) }
   | "true"   { TRUE }
   | "false"  { FALSE }
   | "null"   { NULL }
   | '"'      { read_string "" false lexbuf } 
-  | '{'      { LEFT_BRACE }
-  | '}'      { RIGHT_BRACE }
+  | '('      { LEFT_BRACKET }
+  | ')'      { RIGHT_BRACKET }
   | '['      { LEFT_BRACK }
   | ']'      { RIGHT_BRACK }
   | ':'      { COLON }
+  | '-'      { MINUS }
   | ','      { COMMA }
+  | '.'      { DOT }
+  | "is"     { IS }
+  | ['a'-'z']+     { ATOM(lexeme lexbuf) }
+  | ['A'-'Z']['a'-'z']*     { VAR(lexeme lexbuf) }
   | eof      { EOF }
   | _ { raise (Exception (sprintf "SyntaxError: Unexpected char: '%s' Line: %d Column: %d" (lexeme lexbuf) (lexbuf.StartPos.Line+1) lexbuf.StartPos.Column)) }
 

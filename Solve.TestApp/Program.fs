@@ -16,7 +16,7 @@ let main argv =
     let mutable input = System.Console.ReadLine()
     while input <> "exit" do
         try
-            i.NewInput input |> printfn "%d"
+            i.NewInput input |> printfn "%A"
         with
         | _ as e -> printfn "Failed to parse previous input"
 

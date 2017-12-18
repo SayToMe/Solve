@@ -2,33 +2,39 @@
 module PrologParser
 type token = 
   | EOF
+  | DOT
   | COMMA
+  | MINUS
   | COLON
   | RIGHT_BRACK
   | LEFT_BRACK
-  | RIGHT_BRACE
-  | LEFT_BRACE
+  | RIGHT_BRACKET
+  | LEFT_BRACKET
   | NULL
   | FALSE
   | TRUE
+  | IS
   | STRING of (string)
-  | ID of (string)
-  | FLOAT of (float)
+  | VAR of (string)
+  | ATOM of (string)
   | INT of (int)
 type tokenId = 
     | TOKEN_EOF
+    | TOKEN_DOT
     | TOKEN_COMMA
+    | TOKEN_MINUS
     | TOKEN_COLON
     | TOKEN_RIGHT_BRACK
     | TOKEN_LEFT_BRACK
-    | TOKEN_RIGHT_BRACE
-    | TOKEN_LEFT_BRACE
+    | TOKEN_RIGHT_BRACKET
+    | TOKEN_LEFT_BRACKET
     | TOKEN_NULL
     | TOKEN_FALSE
     | TOKEN_TRUE
+    | TOKEN_IS
     | TOKEN_STRING
-    | TOKEN_ID
-    | TOKEN_FLOAT
+    | TOKEN_VAR
+    | TOKEN_ATOM
     | TOKEN_INT
     | TOKEN_end_of_input
     | TOKEN_error
@@ -36,11 +42,13 @@ type nonTerminalId =
     | NONTERM__startstart
     | NONTERM_start
     | NONTERM_prog
-    | NONTERM_value
-    | NONTERM_object_fields
-    | NONTERM_rev_object_fields
-    | NONTERM_array_values
-    | NONTERM_rev_values
+    | NONTERM_fact
+    | NONTERM_rule
+    | NONTERM_signature
+    | NONTERM_parameter
+    | NONTERM_parameterList
+    | NONTERM_body
+    | NONTERM_calcExpr
 /// This function maps tokens to integer indexes
 val tagOfToken: token -> int
 
@@ -52,4 +60,4 @@ val prodIdxToNonTerminal: int -> nonTerminalId
 
 /// This function gets the name of a token as a string
 val token_to_string: token -> string
-val start : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (Rule.Rule option) 
+val start : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (Solve.Rule.Rule option) 

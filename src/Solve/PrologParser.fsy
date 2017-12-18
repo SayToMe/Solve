@@ -1,67 +1,66 @@
 ﻿%{
+open Solve
+
+open Solve.TermTypes
+open Solve.TermTypes.Transformers
+
 open Solve.Rule
+open Solve.Rule.Transformers
+
 %}
 
 %start start
 
 %token <int> INT
-%token <float> FLOAT
-%token <string> ID
+%token <string> ATOM
+%token <string> VAR
 %token <string> STRING
+%token IS
 %token TRUE
 %token FALSE
 %token NULL
-%token LEFT_BRACE
-%token RIGHT_BRACE
+%token LEFT_BRACKET
+%token RIGHT_BRACKET
 %token LEFT_BRACK
 %token RIGHT_BRACK
 %token COLON
+%token MINUS
 %token COMMA
+%token DOT
 %token EOF
 %type <Solve.Rule.Rule option> start
 
+
 %%
 
-start: definition result EOF
-
-definition: STRING name LEFT_BRACE parameters RIGHT_BRACE
-
-parameters:
-  | { [] }
-  | STRING COLON value { [($1,$3)] }
-  | rev_object_fields COMMA STRING COLON value { ($3, $5) :: $1 }
-
-result:
-  | True { True }
-  | False { False }
-
-%% prog { $1 }
+start: prog { $1 }
 
 prog:
-  | EOF { None }
-  | value { Some $1 }
+	| EOF { None }
+	| fact { Some $1 }
+	| rule { Some $1 }
 
-value:
-  | LEFT_BRACE object_fields RIGHT_BRACE { Assoc $2 }
-  | LEFT_BRACK array_values RIGHT_BRACK { List $2 }
-  | STRING { String $1 }
-  | INT { Int $1 }
-  | FLOAT { Float $1 }
-  | TRUE { Bool true }
-  | FALSE { Bool false }
-  | NULL { Null }
+fact:
+	| signature { Rule($1, True) }
+	
+rule:
+    | signature COLON MINUS body { Rule($1, $4) }
 
-object_fields: rev_object_fields { List.rev $1 };
+signature:
+	| ATOM LEFT_BRACKET parameterList RIGHT_BRACKET { Signature($1, $3) }
 
-rev_object_fields:
-  | { [] }
-  | STRING COLON value { [($1,$3)] }
-  | rev_object_fields COMMA STRING COLON value { ($3, $5) :: $1 }
+parameter:
+    | INT { Parameter(TypedTerm(TypedNumberTerm(NumberTerm (float $1)))) }
 
-array_values:
-  | { [] }
-  | rev_values { List.rev $1 }
+parameterList:
+	| parameter { [$1] }
+    | parameterList COMMA parameter { $3::$1 }
+	| { [] }
 
-rev_values:
-  | value { [$1] }
-| rev_values COMMA value { $3 :: $1 }
+body:
+    | TRUE { True }
+	| FALSE { False }
+	| VAR IS calcExpr { CalcExpr(VariableTerm(Variable($1)), $3) }
+
+calcExpr:
+	| { Value(CalcAny(VariableTerm(Variable("_")))) }
