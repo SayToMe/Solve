@@ -140,7 +140,6 @@
     <FsLex Include="PrologLexer.fsl">
       <OtherFlags>--unicode</OtherFlags>
     </FsLex>
-    <Compile Include="PrologParser.fsi" />
     <Compile Include="PrologParser.fs" />
     <Compile Include="PrologLexer.fs" />
     <Compile Include="Main.fs" />

@@ -2,9 +2,13 @@
 module PrologParser
 type token = 
   | EOF
+  | QUESTION_MARK
   | DOT
   | COMMA
+  | SLASH
+  | ASTERISK
   | MINUS
+  | PLUS
   | COLON
   | RIGHT_BRACK
   | LEFT_BRACK
@@ -20,9 +24,13 @@ type token =
   | INT of (int)
 type tokenId = 
     | TOKEN_EOF
+    | TOKEN_QUESTION_MARK
     | TOKEN_DOT
     | TOKEN_COMMA
+    | TOKEN_SLASH
+    | TOKEN_ASTERISK
     | TOKEN_MINUS
+    | TOKEN_PLUS
     | TOKEN_COLON
     | TOKEN_RIGHT_BRACK
     | TOKEN_LEFT_BRACK
@@ -49,6 +57,7 @@ type nonTerminalId =
     | NONTERM_parameterList
     | NONTERM_body
     | NONTERM_calcExpr
+    | NONTERM_term
 /// This function maps tokens to integer indexes
 val tagOfToken: token -> int
 
@@ -60,4 +69,4 @@ val prodIdxToNonTerminal: int -> nonTerminalId
 
 /// This function gets the name of a token as a string
 val token_to_string: token -> string
-val start : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (Solve.Rule.Rule option) 
+val start : (Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> token) -> Microsoft.FSharp.Text.Lexing.LexBuffer<'cty> -> (ParseResult option) 

@@ -16,7 +16,10 @@ let main argv =
     let mutable input = System.Console.ReadLine()
     while input <> "exit" do
         try
-            i.NewInput input |> printfn "%A"
+            match i.NewInput input with
+            | RuleInfo(r) -> printfn "%A" r
+            | SolveResult(r) -> printfn "%A" r
+            | _ -> ()
         with
         | _ as e -> printfn "Failed to parse previous input"
 
