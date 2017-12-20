@@ -53,8 +53,10 @@ type nonTerminalId =
     | NONTERM_fact
     | NONTERM_rule
     | NONTERM_signature
+    | NONTERM_goal
     | NONTERM_parameter
     | NONTERM_parameterList
+    | NONTERM_termList
     | NONTERM_body
     | NONTERM_calcExpr
     | NONTERM_term
