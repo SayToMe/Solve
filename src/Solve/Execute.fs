@@ -9,8 +9,26 @@ open VariableUnify
 open ExpressionUnify
 
 module Execute =
-    let rec executeCalc =
-        function
+    let rec executeCalc input =
+        let getInnerNumber =
+            function
+            | CalcAny (TypedTerm(TypedNumberTerm(x))) -> x
+            | CalcInner a -> executeCalc a
+            | _ -> failwith "Cannot calculate expression"
+        let op1Inner (op: double -> double) (in1: CalcTerm) =
+            let (NumberTerm(n1)) = getInnerNumber in1
+            NumberTerm(op n1)
+        let op2Inner (op: double -> double -> double) (in1: CalcTerm) (in2: CalcTerm) =
+            let (NumberTerm(n1)) = getInnerNumber in1
+            let (NumberTerm(n2)) = getInnerNumber in2
+            NumberTerm(op n1 n2)
+        let safeDelete n1 n2 =
+            if n2 = 0. then
+                nan
+            else
+                n1 / n2
+
+        match input with
         | Value (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm v1
         | Value (CalcAny(StructureTerm(Structure(functor', args)))) ->
             match functor' with
@@ -22,13 +40,13 @@ module Execute =
             | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(CalcAny(args.[0])))
             | "log" when args.Length = 2 -> executeCalc (Log(CalcAny(args.[0]), CalcAny(args.[1])))
             | _ -> failwith "Cant find according calc functor'"
-        | Plus (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 + v2
-        | Subsctruct (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 - v2
-        | Multiply (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 * v2
-        | Division (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 / v2
-        | Invert (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm(-v1)
-        | Sqrt (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm <| System.Math.Sqrt v1
-        | Log (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm n)))) -> NumberTerm <| System.Math.Log(v1, float n)
+        | Plus (c1, c2) -> op2Inner (+) c1 c2
+        | Subsctruct (c1, c2) -> op2Inner (-) c1 c2
+        | Multiply (c1, c2) -> op2Inner (*) c1 c2
+        | Division (c1, c2) -> op2Inner safeDelete c1 c2
+        | Invert (c1) -> op1Inner (~-) c1
+        | Sqrt (c1) -> op1Inner System.Math.Sqrt c1
+        | Log (c1, c2) -> op2Inner (fun v n -> System.Math.Log(v, n)) c1 c2
         | _ -> failwith "incorrect calc expression called"
 
     // TODO: maybe we should unify each time we execute expression?
