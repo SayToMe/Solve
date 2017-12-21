@@ -23,9 +23,26 @@ type Interactive() =
         | Some (PrologParser.CallParseResult goal) -> 
             let solved = Solve.solve goal _knowledgebase
             let mapped =
-                Seq.map (fun m ->
-                       let (Solve.Rule.Goal(Solve.TermTypes.Structure(_, args))) = goal
-                       (args, m) ||> List.map2 (fun v1 v2 -> (string v1) + " = " + (string v2)) |> List.reduce (+)
-                ) solved
+                solved
+                |> Seq.map (fun result ->
+                         let (Solve.Rule.Goal(Solve.TermTypes.Structure(_, args))) = goal
+                         let variableArgs = 
+                              args
+                              |> List.mapi (fun i arg -> (arg, i))
+                              |> List.filter (fun (arg, _) ->
+                                                  match arg with
+                                                  | (VariableTerm(_)) -> true
+                                                  | _ -> false
+                                             )
+                              |> List.map (fun (arg, i) -> match arg with | (VariableTerm(Variable(var))) -> (var, i) | _ -> failwith "")
+                              |> List.distinctBy (fun (v, i) -> v)
+                         let getVariableResult (_, i) =
+                              result.[i]
+                         variableArgs
+                         |> List.map (fun v -> v, getVariableResult v)
+                         |> List.map (fun ((var, _), res) -> var + " = " + (string res))
+                         |> List.rev
+                         |> List.reduce (fun acc c -> acc + "; " + c)
+                )
             SolveResult mapped
         | None -> NoResult
