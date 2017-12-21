@@ -2,6 +2,9 @@
 module PrologParser
 type token = 
   | EOF
+  | LESS_THAN_SIGN
+  | GREATER_THAN_SIGN
+  | EQUALS_SIGN
   | QUESTION_MARK
   | DOT
   | COMMA
@@ -24,6 +27,9 @@ type token =
   | INT of (int)
 type tokenId = 
     | TOKEN_EOF
+    | TOKEN_LESS_THAN_SIGN
+    | TOKEN_GREATER_THAN_SIGN
+    | TOKEN_EQUALS_SIGN
     | TOKEN_QUESTION_MARK
     | TOKEN_DOT
     | TOKEN_COMMA

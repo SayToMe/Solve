@@ -42,6 +42,9 @@ rule read =
   | ','      { COMMA }
   | '.'      { DOT }
   | '?'      { QUESTION_MARK }
+  | '='      { EQUALS_SIGN }
+  | '>'      { GREATER_THAN_SIGN }
+  | '<'      { LESS_THAN_SIGN }
   | "is"     { IS }
   | ['a'-'z']['A'-'Z' 'a'-'z']*     { ATOM(lexeme lexbuf) }
   | ['A'-'Z']['A'-'Z' 'a'-'z']*     { VAR(lexeme lexbuf) }

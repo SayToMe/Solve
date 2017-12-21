@@ -21,10 +21,11 @@ type Interactive() =
             _knowledgebase <- rule :: _knowledgebase
             RuleInfo(rule)
         | Some (PrologParser.CallParseResult goal) -> 
-            Solve.solve goal _knowledgebase
-            |> Seq.map (fun m ->
-                   let (Solve.Rule.Goal(Solve.TermTypes.Structure(_, args))) = goal
-                   (args, m) ||> List.map2 (fun v1 v2 -> (string v1) + " = " + (string v2)) |> List.reduce (+)
-               )
-            |> SolveResult
+            let solved = Solve.solve goal _knowledgebase
+            let mapped =
+                Seq.map (fun m ->
+                       let (Solve.Rule.Goal(Solve.TermTypes.Structure(_, args))) = goal
+                       (args, m) ||> List.map2 (fun v1 v2 -> (string v1) + " = " + (string v2)) |> List.reduce (+)
+                ) solved
+            SolveResult mapped
         | None -> NoResult

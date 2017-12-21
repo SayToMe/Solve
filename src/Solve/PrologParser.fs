@@ -21,6 +21,9 @@ type ParseResult =
 // This type is the type of tokens accepted by the parser
 type token = 
   | EOF
+  | LESS_THAN_SIGN
+  | GREATER_THAN_SIGN
+  | EQUALS_SIGN
   | QUESTION_MARK
   | DOT
   | COMMA
@@ -44,6 +47,9 @@ type token =
 // This type is used to give symbolic names to token indexes, useful for error messages
 type tokenId = 
     | TOKEN_EOF
+    | TOKEN_LESS_THAN_SIGN
+    | TOKEN_GREATER_THAN_SIGN
+    | TOKEN_EQUALS_SIGN
     | TOKEN_QUESTION_MARK
     | TOKEN_DOT
     | TOKEN_COMMA
@@ -86,53 +92,59 @@ type nonTerminalId =
 let tagOfToken (t:token) = 
   match t with
   | EOF  -> 0 
-  | QUESTION_MARK  -> 1 
-  | DOT  -> 2 
-  | COMMA  -> 3 
-  | SLASH  -> 4 
-  | ASTERISK  -> 5 
-  | MINUS  -> 6 
-  | PLUS  -> 7 
-  | COLON  -> 8 
-  | RIGHT_BRACK  -> 9 
-  | LEFT_BRACK  -> 10 
-  | RIGHT_BRACKET  -> 11 
-  | LEFT_BRACKET  -> 12 
-  | NULL  -> 13 
-  | FALSE  -> 14 
-  | TRUE  -> 15 
-  | IS  -> 16 
-  | STRING _ -> 17 
-  | VAR _ -> 18 
-  | ATOM _ -> 19 
-  | INT _ -> 20 
+  | LESS_THAN_SIGN  -> 1 
+  | GREATER_THAN_SIGN  -> 2 
+  | EQUALS_SIGN  -> 3 
+  | QUESTION_MARK  -> 4 
+  | DOT  -> 5 
+  | COMMA  -> 6 
+  | SLASH  -> 7 
+  | ASTERISK  -> 8 
+  | MINUS  -> 9 
+  | PLUS  -> 10 
+  | COLON  -> 11 
+  | RIGHT_BRACK  -> 12 
+  | LEFT_BRACK  -> 13 
+  | RIGHT_BRACKET  -> 14 
+  | LEFT_BRACKET  -> 15 
+  | NULL  -> 16 
+  | FALSE  -> 17 
+  | TRUE  -> 18 
+  | IS  -> 19 
+  | STRING _ -> 20 
+  | VAR _ -> 21 
+  | ATOM _ -> 22 
+  | INT _ -> 23 
 
 // This function maps integer indexes to symbolic token ids
 let tokenTagToTokenId (tokenIdx:int) = 
   match tokenIdx with
   | 0 -> TOKEN_EOF 
-  | 1 -> TOKEN_QUESTION_MARK 
-  | 2 -> TOKEN_DOT 
-  | 3 -> TOKEN_COMMA 
-  | 4 -> TOKEN_SLASH 
-  | 5 -> TOKEN_ASTERISK 
-  | 6 -> TOKEN_MINUS 
-  | 7 -> TOKEN_PLUS 
-  | 8 -> TOKEN_COLON 
-  | 9 -> TOKEN_RIGHT_BRACK 
-  | 10 -> TOKEN_LEFT_BRACK 
-  | 11 -> TOKEN_RIGHT_BRACKET 
-  | 12 -> TOKEN_LEFT_BRACKET 
-  | 13 -> TOKEN_NULL 
-  | 14 -> TOKEN_FALSE 
-  | 15 -> TOKEN_TRUE 
-  | 16 -> TOKEN_IS 
-  | 17 -> TOKEN_STRING 
-  | 18 -> TOKEN_VAR 
-  | 19 -> TOKEN_ATOM 
-  | 20 -> TOKEN_INT 
-  | 23 -> TOKEN_end_of_input
-  | 21 -> TOKEN_error
+  | 1 -> TOKEN_LESS_THAN_SIGN 
+  | 2 -> TOKEN_GREATER_THAN_SIGN 
+  | 3 -> TOKEN_EQUALS_SIGN 
+  | 4 -> TOKEN_QUESTION_MARK 
+  | 5 -> TOKEN_DOT 
+  | 6 -> TOKEN_COMMA 
+  | 7 -> TOKEN_SLASH 
+  | 8 -> TOKEN_ASTERISK 
+  | 9 -> TOKEN_MINUS 
+  | 10 -> TOKEN_PLUS 
+  | 11 -> TOKEN_COLON 
+  | 12 -> TOKEN_RIGHT_BRACK 
+  | 13 -> TOKEN_LEFT_BRACK 
+  | 14 -> TOKEN_RIGHT_BRACKET 
+  | 15 -> TOKEN_LEFT_BRACKET 
+  | 16 -> TOKEN_NULL 
+  | 17 -> TOKEN_FALSE 
+  | 18 -> TOKEN_TRUE 
+  | 19 -> TOKEN_IS 
+  | 20 -> TOKEN_STRING 
+  | 21 -> TOKEN_VAR 
+  | 22 -> TOKEN_ATOM 
+  | 23 -> TOKEN_INT 
+  | 26 -> TOKEN_end_of_input
+  | 24 -> TOKEN_error
   | _ -> failwith "tokenTagToTokenId: bad token"
 
 /// This function maps production indexes returned in syntax errors to strings representing the non terminal that would be produced by that production
@@ -161,22 +173,28 @@ let prodIdxToNonTerminal (prodIdx:int) =
     | 20 -> NONTERM_body 
     | 21 -> NONTERM_body 
     | 22 -> NONTERM_body 
-    | 23 -> NONTERM_calcExpr 
-    | 24 -> NONTERM_calcExpr 
-    | 25 -> NONTERM_calcExpr 
+    | 23 -> NONTERM_body 
+    | 24 -> NONTERM_body 
+    | 25 -> NONTERM_body 
     | 26 -> NONTERM_calcExpr 
     | 27 -> NONTERM_calcExpr 
-    | 28 -> NONTERM_term 
-    | 29 -> NONTERM_term 
+    | 28 -> NONTERM_calcExpr 
+    | 29 -> NONTERM_calcExpr 
+    | 30 -> NONTERM_calcExpr 
+    | 31 -> NONTERM_term 
+    | 32 -> NONTERM_term 
     | _ -> failwith "prodIdxToNonTerminal: bad production index"
 
-let _fsyacc_endOfInputTag = 23 
-let _fsyacc_tagOfErrorTerminal = 21
+let _fsyacc_endOfInputTag = 26 
+let _fsyacc_tagOfErrorTerminal = 24
 
 // This function gets the name of a token as a string
 let token_to_string (t:token) = 
   match t with 
   | EOF  -> "EOF" 
+  | LESS_THAN_SIGN  -> "LESS_THAN_SIGN" 
+  | GREATER_THAN_SIGN  -> "GREATER_THAN_SIGN" 
+  | EQUALS_SIGN  -> "EQUALS_SIGN" 
   | QUESTION_MARK  -> "QUESTION_MARK" 
   | DOT  -> "DOT" 
   | COMMA  -> "COMMA" 
@@ -202,6 +220,9 @@ let token_to_string (t:token) =
 let _fsyacc_dataOfToken (t:token) = 
   match t with 
   | EOF  -> (null : System.Object) 
+  | LESS_THAN_SIGN  -> (null : System.Object) 
+  | GREATER_THAN_SIGN  -> (null : System.Object) 
+  | EQUALS_SIGN  -> (null : System.Object) 
   | QUESTION_MARK  -> (null : System.Object) 
   | DOT  -> (null : System.Object) 
   | COMMA  -> (null : System.Object) 
@@ -222,18 +243,18 @@ let _fsyacc_dataOfToken (t:token) =
   | VAR _fsyacc_x -> Microsoft.FSharp.Core.Operators.box _fsyacc_x 
   | ATOM _fsyacc_x -> Microsoft.FSharp.Core.Operators.box _fsyacc_x 
   | INT _fsyacc_x -> Microsoft.FSharp.Core.Operators.box _fsyacc_x 
-let _fsyacc_gotos = [| 0us; 65535us; 1us; 65535us; 0us; 1us; 1us; 65535us; 0us; 2us; 1us; 65535us; 0us; 7us; 1us; 65535us; 0us; 8us; 1us; 65535us; 0us; 9us; 4us; 65535us; 5us; 6us; 11us; 31us; 37us; 31us; 38us; 31us; 2us; 65535us; 15us; 23us; 24us; 25us; 1us; 65535us; 15us; 16us; 1us; 65535us; 19us; 20us; 3us; 65535us; 11us; 12us; 37us; 35us; 38us; 36us; 5us; 65535us; 33us; 34us; 44us; 40us; 45us; 41us; 46us; 42us; 47us; 43us; 12us; 65535us; 11us; 32us; 15us; 22us; 19us; 26us; 24us; 22us; 27us; 28us; 33us; 39us; 37us; 32us; 38us; 32us; 44us; 39us; 45us; 39us; 46us; 39us; 47us; 39us; |]
+let _fsyacc_gotos = [| 0us; 65535us; 1us; 65535us; 0us; 1us; 1us; 65535us; 0us; 2us; 1us; 65535us; 0us; 7us; 1us; 65535us; 0us; 8us; 1us; 65535us; 0us; 9us; 4us; 65535us; 5us; 6us; 11us; 32us; 38us; 32us; 39us; 32us; 2us; 65535us; 15us; 24us; 25us; 26us; 1us; 65535us; 15us; 16us; 1us; 65535us; 19us; 20us; 3us; 65535us; 11us; 12us; 38us; 36us; 39us; 37us; 5us; 65535us; 34us; 35us; 51us; 47us; 52us; 48us; 53us; 49us; 54us; 50us; 15us; 65535us; 11us; 33us; 15us; 23us; 19us; 27us; 25us; 23us; 28us; 29us; 34us; 46us; 38us; 33us; 39us; 33us; 40us; 41us; 42us; 43us; 44us; 45us; 51us; 46us; 52us; 46us; 53us; 46us; 54us; 46us; |]
 let _fsyacc_sparseGotoTableRowOffsets = [|0us; 1us; 3us; 5us; 7us; 9us; 11us; 16us; 19us; 21us; 23us; 27us; 33us; |]
-let _fsyacc_stateToProdIdxsTableElements = [| 1us; 0us; 1us; 0us; 1us; 1us; 1us; 2us; 1us; 3us; 1us; 3us; 1us; 3us; 1us; 4us; 1us; 5us; 2us; 6us; 7us; 1us; 7us; 1us; 7us; 3us; 7us; 21us; 22us; 1us; 7us; 1us; 8us; 1us; 8us; 2us; 8us; 12us; 1us; 8us; 1us; 9us; 1us; 9us; 2us; 9us; 15us; 1us; 9us; 1us; 10us; 1us; 11us; 1us; 12us; 1us; 12us; 1us; 14us; 1us; 15us; 1us; 15us; 1us; 17us; 1us; 18us; 1us; 19us; 1us; 20us; 1us; 20us; 5us; 20us; 24us; 25us; 26us; 27us; 3us; 21us; 21us; 22us; 3us; 21us; 22us; 22us; 1us; 21us; 1us; 22us; 1us; 23us; 5us; 24us; 24us; 25us; 26us; 27us; 5us; 24us; 25us; 25us; 26us; 27us; 5us; 24us; 25us; 26us; 26us; 27us; 5us; 24us; 25us; 26us; 27us; 27us; 1us; 24us; 1us; 25us; 1us; 26us; 1us; 27us; 1us; 28us; 1us; 29us; |]
-let _fsyacc_stateToProdIdxsTableRowOffsets = [|0us; 2us; 4us; 6us; 8us; 10us; 12us; 14us; 16us; 18us; 21us; 23us; 25us; 29us; 31us; 33us; 35us; 38us; 40us; 42us; 44us; 47us; 49us; 51us; 53us; 55us; 57us; 59us; 61us; 63us; 65us; 67us; 69us; 71us; 73us; 79us; 83us; 87us; 89us; 91us; 93us; 99us; 105us; 111us; 117us; 119us; 121us; 123us; 125us; 127us; |]
-let _fsyacc_action_rows = 50
-let _fsyacc_actionTableElements = [|3us; 32768us; 0us; 3us; 1us; 4us; 19us; 14us; 0us; 49152us; 0us; 16385us; 0us; 16386us; 1us; 32768us; 6us; 5us; 1us; 32768us; 19us; 18us; 0us; 16387us; 0us; 16388us; 0us; 16389us; 1us; 16390us; 8us; 10us; 1us; 32768us; 6us; 11us; 5us; 32768us; 14us; 30us; 15us; 29us; 18us; 49us; 19us; 18us; 20us; 48us; 3us; 32768us; 2us; 13us; 3us; 37us; 8us; 38us; 0us; 16391us; 1us; 32768us; 12us; 15us; 2us; 16397us; 18us; 49us; 20us; 48us; 2us; 32768us; 3us; 24us; 11us; 17us; 0us; 16392us; 1us; 32768us; 12us; 19us; 2us; 16400us; 18us; 49us; 20us; 48us; 2us; 32768us; 3us; 27us; 11us; 21us; 0us; 16393us; 0us; 16394us; 0us; 16395us; 2us; 32768us; 18us; 49us; 20us; 48us; 0us; 16396us; 0us; 16398us; 2us; 32768us; 18us; 49us; 20us; 48us; 0us; 16399us; 0us; 16401us; 0us; 16402us; 0us; 16403us; 1us; 32768us; 16us; 33us; 2us; 32768us; 18us; 49us; 20us; 48us; 4us; 16404us; 4us; 47us; 5us; 46us; 6us; 45us; 7us; 44us; 2us; 16405us; 3us; 37us; 8us; 38us; 2us; 16406us; 3us; 37us; 8us; 38us; 5us; 32768us; 14us; 30us; 15us; 29us; 18us; 49us; 19us; 18us; 20us; 48us; 5us; 32768us; 14us; 30us; 15us; 29us; 18us; 49us; 19us; 18us; 20us; 48us; 0us; 16407us; 4us; 16408us; 4us; 47us; 5us; 46us; 6us; 45us; 7us; 44us; 4us; 16409us; 4us; 47us; 5us; 46us; 6us; 45us; 7us; 44us; 4us; 16410us; 4us; 47us; 5us; 46us; 6us; 45us; 7us; 44us; 4us; 16411us; 4us; 47us; 5us; 46us; 6us; 45us; 7us; 44us; 2us; 32768us; 18us; 49us; 20us; 48us; 2us; 32768us; 18us; 49us; 20us; 48us; 2us; 32768us; 18us; 49us; 20us; 48us; 2us; 32768us; 18us; 49us; 20us; 48us; 0us; 16412us; 0us; 16413us; |]
-let _fsyacc_actionTableRowOffsets = [|0us; 4us; 5us; 6us; 7us; 9us; 11us; 12us; 13us; 14us; 16us; 18us; 24us; 28us; 29us; 31us; 34us; 37us; 38us; 40us; 43us; 46us; 47us; 48us; 49us; 52us; 53us; 54us; 57us; 58us; 59us; 60us; 61us; 63us; 66us; 71us; 74us; 77us; 83us; 89us; 90us; 95us; 100us; 105us; 110us; 113us; 116us; 119us; 122us; 123us; |]
-let _fsyacc_reductionSymbolCounts = [|1us; 1us; 1us; 3us; 1us; 1us; 1us; 5us; 4us; 4us; 1us; 1us; 3us; 0us; 1us; 3us; 0us; 1us; 1us; 1us; 3us; 3us; 3us; 1us; 3us; 3us; 3us; 3us; 1us; 1us; |]
-let _fsyacc_productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 2us; 2us; 3us; 4us; 5us; 6us; 7us; 8us; 8us; 8us; 9us; 9us; 9us; 10us; 10us; 10us; 10us; 10us; 10us; 11us; 11us; 11us; 11us; 11us; 12us; 12us; |]
-let _fsyacc_immediateActions = [|65535us; 49152us; 16385us; 16386us; 65535us; 65535us; 16387us; 16388us; 16389us; 65535us; 65535us; 65535us; 65535us; 16391us; 65535us; 65535us; 65535us; 16392us; 65535us; 65535us; 65535us; 16393us; 16394us; 16395us; 65535us; 16396us; 16398us; 65535us; 16399us; 16401us; 16402us; 16403us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 16407us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 16412us; 16413us; |]
+let _fsyacc_stateToProdIdxsTableElements = [| 1us; 0us; 1us; 0us; 1us; 1us; 1us; 2us; 1us; 3us; 1us; 3us; 1us; 3us; 1us; 4us; 1us; 5us; 2us; 6us; 7us; 1us; 7us; 1us; 7us; 3us; 7us; 21us; 22us; 1us; 7us; 1us; 8us; 1us; 8us; 2us; 8us; 12us; 1us; 8us; 1us; 9us; 1us; 9us; 2us; 9us; 15us; 1us; 9us; 1us; 9us; 1us; 10us; 1us; 11us; 1us; 12us; 1us; 12us; 1us; 14us; 1us; 15us; 1us; 15us; 1us; 17us; 1us; 18us; 1us; 19us; 4us; 20us; 23us; 24us; 25us; 1us; 20us; 5us; 20us; 27us; 28us; 29us; 30us; 3us; 21us; 21us; 22us; 3us; 21us; 22us; 22us; 1us; 21us; 1us; 22us; 1us; 23us; 1us; 23us; 1us; 24us; 1us; 24us; 1us; 25us; 1us; 25us; 1us; 26us; 5us; 27us; 27us; 28us; 29us; 30us; 5us; 27us; 28us; 28us; 29us; 30us; 5us; 27us; 28us; 29us; 29us; 30us; 5us; 27us; 28us; 29us; 30us; 30us; 1us; 27us; 1us; 28us; 1us; 29us; 1us; 30us; 1us; 31us; 1us; 32us; |]
+let _fsyacc_stateToProdIdxsTableRowOffsets = [|0us; 2us; 4us; 6us; 8us; 10us; 12us; 14us; 16us; 18us; 21us; 23us; 25us; 29us; 31us; 33us; 35us; 38us; 40us; 42us; 44us; 47us; 49us; 51us; 53us; 55us; 57us; 59us; 61us; 63us; 65us; 67us; 69us; 71us; 76us; 78us; 84us; 88us; 92us; 94us; 96us; 98us; 100us; 102us; 104us; 106us; 108us; 110us; 116us; 122us; 128us; 134us; 136us; 138us; 140us; 142us; 144us; |]
+let _fsyacc_action_rows = 57
+let _fsyacc_actionTableElements = [|3us; 32768us; 0us; 3us; 4us; 4us; 22us; 14us; 0us; 49152us; 0us; 16385us; 0us; 16386us; 1us; 32768us; 9us; 5us; 1us; 32768us; 22us; 18us; 0us; 16387us; 0us; 16388us; 0us; 16389us; 1us; 16390us; 11us; 10us; 1us; 32768us; 9us; 11us; 5us; 32768us; 17us; 31us; 18us; 30us; 21us; 56us; 22us; 18us; 23us; 55us; 3us; 32768us; 5us; 13us; 6us; 38us; 11us; 39us; 0us; 16391us; 1us; 32768us; 15us; 15us; 2us; 16397us; 21us; 56us; 23us; 55us; 2us; 32768us; 6us; 25us; 14us; 17us; 0us; 16392us; 1us; 32768us; 15us; 19us; 2us; 16400us; 21us; 56us; 23us; 55us; 2us; 32768us; 6us; 28us; 14us; 21us; 1us; 32768us; 5us; 22us; 0us; 16393us; 0us; 16394us; 0us; 16395us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16396us; 0us; 16398us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16399us; 0us; 16401us; 0us; 16402us; 0us; 16403us; 4us; 32768us; 1us; 44us; 2us; 42us; 3us; 40us; 19us; 34us; 2us; 32768us; 21us; 56us; 23us; 55us; 4us; 16404us; 7us; 54us; 8us; 53us; 9us; 52us; 10us; 51us; 2us; 16405us; 6us; 38us; 11us; 39us; 2us; 16406us; 6us; 38us; 11us; 39us; 5us; 32768us; 17us; 31us; 18us; 30us; 21us; 56us; 22us; 18us; 23us; 55us; 5us; 32768us; 17us; 31us; 18us; 30us; 21us; 56us; 22us; 18us; 23us; 55us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16407us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16408us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16409us; 0us; 16410us; 4us; 16411us; 7us; 54us; 8us; 53us; 9us; 52us; 10us; 51us; 4us; 16412us; 7us; 54us; 8us; 53us; 9us; 52us; 10us; 51us; 4us; 16413us; 7us; 54us; 8us; 53us; 9us; 52us; 10us; 51us; 4us; 16414us; 7us; 54us; 8us; 53us; 9us; 52us; 10us; 51us; 2us; 32768us; 21us; 56us; 23us; 55us; 2us; 32768us; 21us; 56us; 23us; 55us; 2us; 32768us; 21us; 56us; 23us; 55us; 2us; 32768us; 21us; 56us; 23us; 55us; 0us; 16415us; 0us; 16416us; |]
+let _fsyacc_actionTableRowOffsets = [|0us; 4us; 5us; 6us; 7us; 9us; 11us; 12us; 13us; 14us; 16us; 18us; 24us; 28us; 29us; 31us; 34us; 37us; 38us; 40us; 43us; 46us; 48us; 49us; 50us; 51us; 54us; 55us; 56us; 59us; 60us; 61us; 62us; 63us; 68us; 71us; 76us; 79us; 82us; 88us; 94us; 97us; 98us; 101us; 102us; 105us; 106us; 107us; 112us; 117us; 122us; 127us; 130us; 133us; 136us; 139us; 140us; |]
+let _fsyacc_reductionSymbolCounts = [|1us; 1us; 1us; 3us; 1us; 1us; 1us; 5us; 4us; 5us; 1us; 1us; 3us; 0us; 1us; 3us; 0us; 1us; 1us; 1us; 3us; 3us; 3us; 3us; 3us; 3us; 1us; 3us; 3us; 3us; 3us; 1us; 1us; |]
+let _fsyacc_productionToNonTerminalTable = [|0us; 1us; 2us; 2us; 2us; 2us; 3us; 4us; 5us; 6us; 7us; 8us; 8us; 8us; 9us; 9us; 9us; 10us; 10us; 10us; 10us; 10us; 10us; 10us; 10us; 10us; 11us; 11us; 11us; 11us; 11us; 12us; 12us; |]
+let _fsyacc_immediateActions = [|65535us; 49152us; 16385us; 16386us; 65535us; 65535us; 16387us; 16388us; 16389us; 65535us; 65535us; 65535us; 65535us; 16391us; 65535us; 65535us; 65535us; 16392us; 65535us; 65535us; 65535us; 65535us; 16393us; 16394us; 16395us; 65535us; 16396us; 16398us; 65535us; 16399us; 16401us; 16402us; 16403us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 16407us; 65535us; 16408us; 65535us; 16409us; 16410us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 65535us; 16415us; 16416us; |]
 let _fsyacc_reductions ()  =    [| 
-# 236 "PrologParser.fs"
+# 257 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : ParseResult option)) in
             Microsoft.FSharp.Core.Operators.box
@@ -242,334 +263,370 @@ let _fsyacc_reductions ()  =    [|
                       raise (Microsoft.FSharp.Text.Parsing.Accept(Microsoft.FSharp.Core.Operators.box _1))
                    )
                  : '_startstart));
-# 245 "PrologParser.fs"
+# 266 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'prog)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 43 "PrologParser.fsy"
+# 46 "PrologParser.fsy"
                                    _1 
                    )
-# 43 "PrologParser.fsy"
+# 46 "PrologParser.fsy"
                  : ParseResult option));
-# 256 "PrologParser.fs"
+# 277 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 46 "PrologParser.fsy"
+# 49 "PrologParser.fsy"
                               None 
                    )
-# 46 "PrologParser.fsy"
+# 49 "PrologParser.fsy"
                  : 'prog));
-# 266 "PrologParser.fs"
+# 287 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'goal)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 47 "PrologParser.fsy"
+# 50 "PrologParser.fsy"
                                                    Some <| CallParseResult _3 
                    )
-# 47 "PrologParser.fsy"
+# 50 "PrologParser.fsy"
                  : 'prog));
-# 277 "PrologParser.fs"
+# 298 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'fact)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 48 "PrologParser.fsy"
+# 51 "PrologParser.fsy"
                                Some <| RuleParseResult _1 
                    )
-# 48 "PrologParser.fsy"
+# 51 "PrologParser.fsy"
                  : 'prog));
-# 288 "PrologParser.fs"
+# 309 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'rule)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 49 "PrologParser.fsy"
+# 52 "PrologParser.fsy"
                                Some <| RuleParseResult _1 
                    )
-# 49 "PrologParser.fsy"
+# 52 "PrologParser.fsy"
                  : 'prog));
-# 299 "PrologParser.fs"
+# 320 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'signature)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 52 "PrologParser.fsy"
+# 55 "PrologParser.fsy"
                                     Rule(_1, True) 
                    )
-# 52 "PrologParser.fsy"
+# 55 "PrologParser.fsy"
                  : 'fact));
-# 310 "PrologParser.fs"
+# 331 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'signature)) in
             let _4 = (let data = parseState.GetInput(4) in (Microsoft.FSharp.Core.Operators.unbox data : 'body)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 55 "PrologParser.fsy"
+# 58 "PrologParser.fsy"
                                                             Rule(_1, _4) 
                    )
-# 55 "PrologParser.fsy"
+# 58 "PrologParser.fsy"
                  : 'rule));
-# 322 "PrologParser.fs"
+# 343 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'parameterList)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 58 "PrologParser.fsy"
+# 61 "PrologParser.fsy"
                                                                         Signature(_1, _3) 
                    )
-# 58 "PrologParser.fsy"
+# 61 "PrologParser.fsy"
                  : 'signature));
-# 334 "PrologParser.fs"
+# 355 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'termList)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 61 "PrologParser.fsy"
-                                                                   Solve.Rule.Goal(Solve.TermTypes.Structure(_1, _3)) 
+# 64 "PrologParser.fsy"
+                                                                       Solve.Rule.Goal(Solve.TermTypes.Structure(_1, _3)) 
                    )
-# 61 "PrologParser.fsy"
+# 64 "PrologParser.fsy"
                  : 'goal));
-# 346 "PrologParser.fs"
+# 367 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 64 "PrologParser.fsy"
+# 67 "PrologParser.fsy"
                                   Parameter(_1) 
                    )
-# 64 "PrologParser.fsy"
+# 67 "PrologParser.fsy"
                  : 'parameter));
-# 357 "PrologParser.fs"
+# 378 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'parameter)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 67 "PrologParser.fsy"
+# 70 "PrologParser.fsy"
                                     [_1] 
                    )
-# 67 "PrologParser.fsy"
+# 70 "PrologParser.fsy"
                  : 'parameterList));
-# 368 "PrologParser.fs"
+# 389 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'parameterList)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'parameter)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 68 "PrologParser.fsy"
+# 71 "PrologParser.fsy"
                                                            _3::_1 
                    )
-# 68 "PrologParser.fsy"
+# 71 "PrologParser.fsy"
                  : 'parameterList));
-# 380 "PrologParser.fs"
+# 401 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 69 "PrologParser.fsy"
+# 72 "PrologParser.fsy"
                           [] 
                    )
-# 69 "PrologParser.fsy"
+# 72 "PrologParser.fsy"
                  : 'parameterList));
-# 390 "PrologParser.fs"
+# 411 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 72 "PrologParser.fsy"
+# 75 "PrologParser.fsy"
                                [_1] 
                    )
-# 72 "PrologParser.fsy"
+# 75 "PrologParser.fsy"
                  : 'termList));
-# 401 "PrologParser.fs"
+# 422 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'termList)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 73 "PrologParser.fsy"
+# 76 "PrologParser.fsy"
                                                  _3::_1 
                    )
-# 73 "PrologParser.fsy"
+# 76 "PrologParser.fsy"
                  : 'termList));
-# 413 "PrologParser.fs"
+# 434 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 74 "PrologParser.fsy"
+# 77 "PrologParser.fsy"
                           [] 
                    )
-# 74 "PrologParser.fsy"
+# 77 "PrologParser.fsy"
                  : 'termList));
-# 423 "PrologParser.fs"
+# 444 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 77 "PrologParser.fsy"
+# 80 "PrologParser.fsy"
                                   True 
                    )
-# 77 "PrologParser.fsy"
+# 80 "PrologParser.fsy"
                  : 'body));
-# 433 "PrologParser.fs"
+# 454 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 78 "PrologParser.fsy"
+# 81 "PrologParser.fsy"
                                 False 
                    )
-# 78 "PrologParser.fsy"
+# 81 "PrologParser.fsy"
                  : 'body));
-# 443 "PrologParser.fs"
+# 464 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'goal)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 79 "PrologParser.fsy"
+# 82 "PrologParser.fsy"
                                CallExpression(_1) 
                    )
-# 79 "PrologParser.fsy"
+# 82 "PrologParser.fsy"
                  : 'body));
-# 454 "PrologParser.fs"
+# 475 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 80 "PrologParser.fsy"
+# 83 "PrologParser.fsy"
                                            CalcExpr(_1, _3) 
                    )
-# 80 "PrologParser.fsy"
+# 83 "PrologParser.fsy"
                  : 'body));
-# 466 "PrologParser.fs"
+# 487 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'body)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'body)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 81 "PrologParser.fsy"
+# 84 "PrologParser.fsy"
                                           AndExpression(_1, _3) 
                    )
-# 81 "PrologParser.fsy"
+# 84 "PrologParser.fsy"
                  : 'body));
-# 478 "PrologParser.fs"
+# 499 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'body)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'body)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 82 "PrologParser.fsy"
+# 85 "PrologParser.fsy"
                                           OrExpression(_1, _3) 
                    )
-# 82 "PrologParser.fsy"
+# 85 "PrologParser.fsy"
                  : 'body));
-# 490 "PrologParser.fs"
+# 511 "PrologParser.fs"
+        (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 86 "PrologParser.fsy"
+                                                EqExpr(_1, _3) 
+                   )
+# 86 "PrologParser.fsy"
+                 : 'body));
+# 523 "PrologParser.fs"
+        (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 87 "PrologParser.fsy"
+                                                      GrExpr(_1, _3) 
+                   )
+# 87 "PrologParser.fsy"
+                 : 'body));
+# 535 "PrologParser.fs"
+        (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
+            Microsoft.FSharp.Core.Operators.box
+                (
+                   (
+# 88 "PrologParser.fsy"
+                                                   LeExpr(_1, _3) 
+                   )
+# 88 "PrologParser.fsy"
+                 : 'body));
+# 547 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'term)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 85 "PrologParser.fsy"
+# 91 "PrologParser.fsy"
                                Value(CalcAny(_1)) 
                    )
-# 85 "PrologParser.fsy"
+# 91 "PrologParser.fsy"
                  : 'calcExpr));
-# 501 "PrologParser.fs"
+# 558 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 86 "PrologParser.fsy"
+# 92 "PrologParser.fsy"
                                                  Plus(CalcInner(_1), CalcInner(_3)) 
                    )
-# 86 "PrologParser.fsy"
+# 92 "PrologParser.fsy"
                  : 'calcExpr));
-# 513 "PrologParser.fs"
+# 570 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 87 "PrologParser.fsy"
+# 93 "PrologParser.fsy"
                                                   Subsctruct(CalcInner(_1), CalcInner(_3)) 
                    )
-# 87 "PrologParser.fsy"
+# 93 "PrologParser.fsy"
                  : 'calcExpr));
-# 525 "PrologParser.fs"
+# 582 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 88 "PrologParser.fsy"
+# 94 "PrologParser.fsy"
                                                      Multiply(CalcInner(_1), CalcInner(_3)) 
                    )
-# 88 "PrologParser.fsy"
+# 94 "PrologParser.fsy"
                  : 'calcExpr));
-# 537 "PrologParser.fs"
+# 594 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data : 'calcExpr)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 89 "PrologParser.fsy"
+# 95 "PrologParser.fsy"
                                                   Division(CalcInner(_1), CalcInner(_3)) 
                    )
-# 89 "PrologParser.fsy"
+# 95 "PrologParser.fsy"
                  : 'calcExpr));
-# 549 "PrologParser.fs"
+# 606 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : int)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 92 "PrologParser.fsy"
+# 98 "PrologParser.fsy"
                               TypedTerm(TypedNumberTerm(NumberTerm (float _1))) 
                    )
-# 92 "PrologParser.fsy"
+# 98 "PrologParser.fsy"
                  : 'term));
-# 560 "PrologParser.fs"
+# 617 "PrologParser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
-# 93 "PrologParser.fsy"
+# 99 "PrologParser.fsy"
                               VariableTerm(Variable(_1)) 
                    )
-# 93 "PrologParser.fsy"
+# 99 "PrologParser.fsy"
                  : 'term));
 |]
-# 572 "PrologParser.fs"
+# 629 "PrologParser.fs"
 let tables () : Microsoft.FSharp.Text.Parsing.Tables<_> = 
   { reductions= _fsyacc_reductions ();
     endOfInputTag = _fsyacc_endOfInputTag;
@@ -588,7 +645,7 @@ let tables () : Microsoft.FSharp.Text.Parsing.Tables<_> =
                               match parse_error_rich with 
                               | Some f -> f ctxt
                               | None -> parse_error ctxt.Message);
-    numTerminals = 24;
+    numTerminals = 27;
     productionToNonTerminalTable = _fsyacc_productionToNonTerminalTable  }
 let engine lexer lexbuf startState = (tables ()).Interpret(lexer, lexbuf, startState)
 let start lexer lexbuf : ParseResult option =
