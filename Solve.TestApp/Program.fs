@@ -65,7 +65,7 @@ let main argv =
                     printfn ""
                 | _ -> ()
         with
-        | _ as e -> printfn "Failed to parse previous input"
+        | _ as e -> printfn "Failed. %A" e.Message
 
         input <- readInput mode
         

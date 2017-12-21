@@ -46,8 +46,8 @@ rule read =
   | '>'      { GREATER_THAN_SIGN }
   | '<'      { LESS_THAN_SIGN }
   | "is"     { IS }
-  | ['a'-'z']['A'-'Z' 'a'-'z']*     { ATOM(lexeme lexbuf) }
-  | ['A'-'Z']['A'-'Z' 'a'-'z']*     { VAR(lexeme lexbuf) }
+  | ['a'-'z']['A'-'Z' 'a'-'z' '0'-'9']*     { ATOM(lexeme lexbuf) }
+  | ['A'-'Z']['A'-'Z' 'a'-'z' '0'-'9']*     { VAR(lexeme lexbuf) }
   | eof      { EOF }
   | _ { raise (Exception (sprintf "SyntaxError: Unexpected char: '%s' Line: %d Column: %d" (lexeme lexbuf) (lexbuf.StartPos.Line+1) lexbuf.StartPos.Column)) }
 

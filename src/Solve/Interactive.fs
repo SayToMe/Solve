@@ -18,7 +18,7 @@ type Interactive() =
 
         match PrologParser.start PrologLexer.read lexbuf with
         | Some (PrologParser.RuleParseResult(rule)) -> 
-            _knowledgebase <- rule :: _knowledgebase
+            _knowledgebase <- _knowledgebase@[rule]
             RuleInfo(rule)
         | Some (PrologParser.CallParseResult goal) -> 
             let solved = Solve.solve goal _knowledgebase
@@ -42,7 +42,7 @@ type Interactive() =
                          |> List.map (fun v -> v, getVariableResult v)
                          |> List.map (fun ((var, _), res) -> var + " = " + (string res))
                          |> List.rev
-                         |> List.reduce (fun acc c -> acc + "; " + c)
+                         |> List.reduce (fun acc c -> acc + ", " + c)
                 )
             SolveResult mapped
         | None -> NoResult
