@@ -30,6 +30,23 @@ let main argv =
     let mutable mode = Insert
     let mutable input = readInput mode
 
+    // Factorial example
+    // factorial(1,1).
+    // factorial(X,Y) :- X > 1, X1 is X - 1, factorial(X1, Y1), Y is X * Y1.
+
+    // Parent example
+    // >>> person(name)
+    // person(masha).
+    // person(misha).
+    // person(alex).
+    // person(sova).
+    // >>> parent(Parent, Child)
+    // parent(alex, masha).
+    // parent(alex, sova).
+    // parent(masha, misha).
+    // >>> grandparent(GrandParent, GrandChild)
+    // grandparent(GP, GC) :- parent(GP, P), parent(P, GC).
+
     while input <> "exit" do
         try
             match input with
