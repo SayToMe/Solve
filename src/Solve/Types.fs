@@ -5,16 +5,18 @@ open System.Diagnostics
 module TermTypes =
     [<AutoOpen>]
     module Concrete =
+        type AtomTerm = AtomTerm of string
         type BoolTerm = BoolTerm of bool
         type NumberTerm = NumberTerm of double
         type CharTerm = CharTerm of char
     
         type ListTerm = ListTerm of list<TypedTerm>
-        and [<StructuredFormatDisplay("{AsString}")>] TypedTerm = TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm | TypedListTerm of ListTerm
+        and [<StructuredFormatDisplay("{AsString}")>] TypedTerm = TypedAtomTerm of AtomTerm | TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm | TypedListTerm of ListTerm
         with
         member a.AsString =
             let rec formatTyped =
                 function
+                | TypedAtomTerm(AtomTerm v) -> v.ToString()
                 | TypedBoolTerm(BoolTerm v) -> v.ToString()
                 | TypedNumberTerm(NumberTerm v) -> v.ToString()
                 | TypedCharTerm(CharTerm v) -> v.ToString()

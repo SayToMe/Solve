@@ -97,3 +97,4 @@ calcExpr:
 term:
 	| INT { TypedTerm(TypedNumberTerm(NumberTerm (float $1))) }
 	| VAR { VariableTerm(Variable($1)) }
+	| ATOM { TypedTerm(TypedAtomTerm(AtomTerm ($1))) }
