@@ -11,6 +11,10 @@ module Rule =
     type Parameter = Parameter of Term
 
     type Signature = Signature of string * Parameter list
+        with
+        override self.ToString() =
+            let (Signature(name, parameters)) = self
+            sprintf "%s/%d" name parameters.Length
     type Goal = Goal of Structure
 
     [<AutoOpenAttribute>]

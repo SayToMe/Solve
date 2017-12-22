@@ -62,7 +62,7 @@ let main argv =
             | "query" -> mode <- Query
             | _ ->
                 match interactive.NewInput input with
-                | RuleInfo(r) -> printfn "%A" r
+                | RuleInfo(Rule.Rule(sign, _)) -> printfn "Insertion succeed: %O." sign
                 | SolveResult(r) ->
                     let rec proc seq checkKey =
                         let checkBackTrack() =
