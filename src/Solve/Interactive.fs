@@ -35,13 +35,12 @@ type Interactive() =
                                                   | _ -> false
                                              )
                               |> List.map (fun (arg, i) -> match arg with | (VariableTerm(Variable(var))) -> (var, i) | _ -> failwith "")
-                              |> List.distinctBy (fun (v, i) -> v)
+                              |> List.distinctBy (fun (v, _) -> v)
                          let getVariableResult (_, i) =
                               result.[i]
                          variableArgs
                          |> List.map (fun v -> v, getVariableResult v)
                          |> List.map (fun ((var, _), res) -> var + " = " + (string res))
-                         |> List.rev
                          |> List.reduce (fun acc c -> acc + ", " + c)
                 )
             SolveResult mapped
