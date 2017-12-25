@@ -75,7 +75,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\Solve\Solve.fsproj">
+    <ProjectReference Include="..\..\src\Solve\Solve.fsproj">
       <Name>Solve</Name>
       <Project>{7e47d76b-5c67-4ff6-8d89-8b959aeb428d}</Project>
       <Private>True</Private>
