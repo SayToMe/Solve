@@ -27,9 +27,13 @@ let inline checkSolve expected actual =
 let sn x = TypedTerm(TypedNumberTerm(NumberTerm x))
 [<DebuggerStepThrough>]
 let sv x = VariableTerm(Variable(x))
+[<DebuggerStepThrough>]
+let sa x = TypedTerm(TypedAtomTerm(AtomTerm x))
 
 [<DebuggerStepThrough>]
 let snp x = Parameter(sn x)
+[<DebuggerStepThrough>]
+let ap x = Parameter(sa x)
 [<DebuggerStepThrough>]
 let vp n = Parameter(VariableTerm(Variable(n)))
 [<DebuggerStepThrough>]
@@ -37,6 +41,8 @@ let charP c = Parameter(TypedTerm(TypedCharTerm(CharTerm(c))))
 
 [<DebuggerStepThrough>]
 let sna x = Argument(sn x)
+[<DebuggerStepThrough>]
+let saa x = Argument(sa x)
 [<DebuggerStepThrough>]
 let va n = Argument(VariableTerm(Variable(n)))
 [<DebuggerStepThrough>]
@@ -223,6 +229,14 @@ module SimpleTests =
         |> check (EqExpr(sn 1., sv "N2"))
     
     [<Test; MemoryReport>]
+    let testUnifyCalc() =
+        unifyExpression (CalcExpr(sv "N", Value(sn 1.))) (fun (Variable(v)) -> sn 2.)
+        |> check (CalcExpr(sn 2., Value(sn 1.)))
+
+        unifyExpression (CalcExpr(sv "N", Value(StructureTerm(Structure("+", [sv "N"; sn 1.]))))) (fun (Variable(v)) -> sn 2.)
+        |> check (CalcExpr(sn 2., Value(StructureTerm(Structure("+", [sn 2.; sn 1.])))))
+
+    [<Test; MemoryReport>]
     let testUnifyRule() = 
         unifyRule (Rule(Signature("eq1", [vp "N"]), (EqExpr(sv "N", sn 1.)))) [sna 1.]
         |> check (Some(Rule(Signature("eq1", [snp 1.]), (EqExpr(sn 1., sn 1.)))))
@@ -231,10 +245,10 @@ module SimpleTests =
 
     [<Test; MemoryReport>]
     let testExecuteCalc() = 
-        executeCalc (Value(CalcAny(sn 1.)))
+        executeCalc (Value(sn 1.))
         |> check (NumberTerm(1.))
 
-        executeCalc (Plus(CalcAny(sn 1.), CalcAny(sn 1.)))
+        executeCalc (Plus(Value(sn 1.), Value(sn 1.)))
         |> check (NumberTerm(2.))
     
     [<Test; MemoryReport>]
@@ -245,8 +259,8 @@ module SimpleTests =
         |> checkExecuteExpression [EqExpr(sn 1., sn 1.)]
         executeExpression (EqExpr(sv "N", sn 1.)) executeCustom (fun v -> VariableTerm(v))
         |> checkExecuteExpression [EqExpr(sn 1., sn 1.)]
-        executeExpression (AndExpression(CalcExpr(sv "N", Value(CalcAny(sn 1.))), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
-        |> checkExecuteExpression [AndExpression(CalcExpr(sn 1., Value(CalcAny(sn 1.))), EqExpr(sn 1., sn 1.))]
+        executeExpression (AndExpression(CalcExpr(sv "N", Value(sn 1.)), EqExpr(sv "N", sn 1.))) executeCustom (fun v -> sn 1.)
+        |> checkExecuteExpression [AndExpression(CalcExpr(sn 1., Value(sn 1.)), EqExpr(sn 1., sn 1.))]
 
     open Solve
 
@@ -273,7 +287,7 @@ module SimpleTests =
         solve (goal("innervar", [va "N"])) [Rule(Signature("innervar", [vp "N"]), (AndExpression(EqExpr(sv "Temp", sn 1.), EqExpr(sv "N", sv "Temp"))))]
         |> checkSolve [[sn 1.]]
 
-        solve (goal("structure execute", [sna 2.; va "Res"])) [Rule(Signature("structure execute", [vp "N"; vp "R"]), CalcExpr(sv "R", Value(CalcAny(StructureTerm(Structure("+", [sv "N"; sn 1.]))))))]
+        solve (goal("structure execute", [sna 2.; va "Res"])) [Rule(Signature("structure execute", [vp "N"; vp "R"]), CalcExpr(sv "R", Value(StructureTerm(Structure("+", [sv "N"; sn 1.])))))]
         |> checkSolve [[sn 2.; sn 3.]]
 
     [<Test; MemoryReport>]
@@ -288,7 +302,7 @@ module SimpleTests =
 
     [<Test; MemoryReport>]
     let checkLazySolve =
-        solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(CalcAny(sv "C"), CalcAny(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
+        solve (goal("lazy infinite", [sna 1.; va "R"])) [Rule(Signature("lazy infinite", [vp "C"; vp "R"]), OrExpression(EqExpr(sv "C", sv "R"), AndExpression(CalcExpr(sv "NextC", Plus(Value(sv "C"), Value(sn 1.))), CallExpression(Goal(Structure("lazy infinite", [sv "NextC"; sv "R"]))))))]
         |> Seq.take 10
         |> checkSolve ([1..10] |> List.map (fun x -> [sn 1.; sn (float x)]))
 
@@ -313,7 +327,7 @@ module SimpleTests =
     [<Test; MemoryReport>]
     let factorialTest() =
         let leftOr = AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.))
-        let rightOr = AndExpression(GrExpr(sv "N", sn 1.), AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N"))))))
+        let rightOr = AndExpression(GrExpr(sv "N", sn 1.), AndExpression(CalcExpr(sv "N1", Subsctruct(Value(sv "N"), Value(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(Value(sv "R1"), Value(sv "N"))))))
         let factorial = Rule(Signature("factorial", [vp "N"; vp "Res"]), OrExpression(leftOr, rightOr))
 
         let knowledgebase = [
@@ -331,7 +345,7 @@ module SimpleTests =
     [<Test; MemoryReport>]
     let cutFactorialTest() =
         let leftOr = AndExpression(AndExpression(EqExpr(sv "N", sn 1.), EqExpr(sv "Res", sn 1.)), Cut)
-        let rightOr = AndExpression(CalcExpr(sv "N1", Subsctruct(CalcAny(sv "N"), CalcAny(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(CalcAny(sv "R1"), CalcAny(sv "N")))))
+        let rightOr = AndExpression(CalcExpr(sv "N1", Subsctruct(Value(sv "N"), Value(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [sv "N1"; sv "R1"]))), CalcExpr(sv "Res", Multiply(Value(sv "R1"), Value(sv "N")))))
         let factorial = Rule(Signature("factorial", [vp "N"; vp "Res"]), OrExpression(leftOr, rightOr))
 
         let knowledgebase = [
@@ -388,7 +402,7 @@ module RuleTests =
         solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]]
 
-    [<Test; MemoryReport>]
+    //[<Test; MemoryReport>]
     let bigTest() =
         let r = System.Random()
         let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person
@@ -407,3 +421,35 @@ module RuleTests =
         let toTest = [1..10000] |> List.map (fun i -> generate (fun p c -> (goal("parent", [va p; va c]))))
 
         toTest |> List.map (fun t -> solve t kb |> Seq.toList) |> ignore
+
+[<TestFixture>]
+module ParserTests =
+    let interactive = Solve.Interactive()
+
+    [<Test; MemoryReport>]
+    let parseFacts() =
+        interactive.NewInput "fact(1)." |> check (RuleInfo(Rule(Signature("fact", [snp 1.]), True)))
+        interactive.NewInput "fact(2)." |> check (RuleInfo(Rule(Signature("fact", [snp 2.]), True)))
+        interactive.NewInput "fact(X)." |> check (RuleInfo(Rule(Signature("fact", [vp "X"]), True)))
+        interactive.NewInput "fact(Y)." |> check (RuleInfo(Rule(Signature("fact", [vp "Y"]), True)))
+        interactive.NewInput "fact(x)." |> check (RuleInfo(Rule(Signature("fact", [ap "x"]), True)))
+        interactive.NewInput "fact(y)." |> check (RuleInfo(Rule(Signature("fact", [ap "y"]), True)))
+
+    [<Test; MemoryReport>]
+    let parseEqGrLeRule() =
+        interactive.NewInput "rule(X) :- X = 1." |> check (RuleInfo(Rule(Signature("rule", [vp "X"]), EqExpr(var "X", sn 1.))))
+        interactive.NewInput "rule(X) :- X > 1." |> check (RuleInfo(Rule(Signature("rule", [vp "X"]), GrExpr(var "X", sn 1.))))
+        interactive.NewInput "rule(X) :- X < 1." |> check (RuleInfo(Rule(Signature("rule", [vp "X"]), LeExpr(var "X", sn 1.))))
+    
+    [<Test; MemoryReport>]
+    let parseAndRule() =
+        interactive.NewInput "rule(X, Y) :- X = 1, Y = 2." |> check (RuleInfo(Rule(Signature("rule", [vp "X"; vp "Y"]), AndExpression(EqExpr(var "X", sn 1.), EqExpr(var "Y", sn 2.)))))
+    [<Test; MemoryReport>]
+    let parseOrRule() =
+        interactive.NewInput "rule(X, Y) :- X = 1 ; Y = 2." |> check (RuleInfo(Rule(Signature("rule", [vp "X"; vp "Y"]), OrExpression(EqExpr(var "X", sn 1.), EqExpr(var "Y", sn 2.)))))
+
+    [<Test; MemoryReport>]
+    let parseFactorialRule() =
+        interactive.NewInput "factorial(1,1)." |> check (RuleInfo(Rule(Signature("factorial", [snp 1.; snp 1.]), True)))
+
+        interactive.NewInput "factorial(X,Y) :- X > 1, X1 is X - 1, factorial(X1, Y1), Y is X * Y1." |> check (RuleInfo(Rule(Signature("factorial", [vp "X"; vp "Y"]), (AndExpression(GrExpr(var "X", sn 1.), AndExpression(CalcExpr(var "X1", Subsctruct(Value(var "X"), Value(sn 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [var "X1"; var "Y1"]))), CalcExpr(var "Y", Multiply(Value(var "X"), Value(var "Y1"))))))))))
