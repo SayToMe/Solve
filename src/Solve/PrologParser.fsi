@@ -7,6 +7,7 @@ type token =
   | EQUALS_SIGN
   | QUESTION_MARK
   | DOT
+  | SEMICOLON
   | COMMA
   | SLASH
   | ASTERISK
@@ -32,6 +33,7 @@ type tokenId =
     | TOKEN_EQUALS_SIGN
     | TOKEN_QUESTION_MARK
     | TOKEN_DOT
+    | TOKEN_SEMICOLON
     | TOKEN_COMMA
     | TOKEN_SLASH
     | TOKEN_ASTERISK
