@@ -10,7 +10,6 @@
     <RootNamespace>Solve.TestApp</RootNamespace>
     <AssemblyName>Solve.TestApp</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFSharpCoreVersion>4.4.1.0</TargetFSharpCoreVersion>
     <Name>Solve.TestApp</Name>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

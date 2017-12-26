@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>Solve</RootNamespace>
     <AssemblyName>Solve</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <Name>Solve</Name>
     <TargetFrameworkProfile />
     <DocumentationFile>.\bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
