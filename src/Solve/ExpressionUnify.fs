@@ -24,7 +24,7 @@ module ExpressionUnify =
         | Invert (v1) -> Invert(changeCalcTermIfVariable v1)
         | Sqrt (v1) -> Sqrt(changeCalcTermIfVariable v1)
         | Log (v1, n) -> Log(changeCalcTermIfVariable v1, changeCalcTermIfVariable n)
-        | Value(v) as self -> changeCalcTermIfVariable self
+        | Value(_) as self -> changeCalcTermIfVariable self
 
     let rec unifyExpression expression changeVariable =
         match expression with
