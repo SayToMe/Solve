@@ -102,7 +102,12 @@ module Execute =
         | True -> Seq.singleton True
         | False -> Seq.empty
         | Cut -> Seq.singleton Cut
-        | NotExpression e -> Seq.map (NotExpression) (executeExpression e executeCustom changeVariableFn)
+        | NotExpression e ->
+            let executed = executeExpression (AndExpression(Cut, e)) executeCustom changeVariableFn
+            if Seq.isEmpty executed then
+                Seq.singleton (NotExpression e)
+            else
+                Seq.empty
         | OrExpression (e1, e2) ->
             let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2))
             let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x)))
