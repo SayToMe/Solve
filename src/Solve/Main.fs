@@ -21,3 +21,4 @@ module Solve =
         |> Seq.collect (fun r ->
             execute goal r (fun custom -> solve custom knowledgeBase)
         )
+

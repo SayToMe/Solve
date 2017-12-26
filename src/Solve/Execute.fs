@@ -9,27 +9,44 @@ open VariableUnify
 open ExpressionUnify
 
 module Execute =
-    let rec executeCalc =
-        function
-        | Value (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm v1
-        | Value (CalcAny(StructureTerm(Structure(functor', args)))) ->
+    let rec executeCalc input =
+        let getInnerNumber =
+            function
+            | Value (TypedTerm(TypedNumberTerm(x))) -> x
+            | _ as inner -> executeCalc inner
+        let op1Inner (op: double -> double) (in1: Calc) =
+            let (NumberTerm(n1)) = getInnerNumber in1
+            NumberTerm(op n1)
+        let op2Inner (op: double -> double -> double) (in1: Calc) (in2: Calc) =
+            let (NumberTerm(n1)) = getInnerNumber in1
+            let (NumberTerm(n2)) = getInnerNumber in2
+            NumberTerm(op n1 n2)
+        let safeDelete n1 n2 =
+            if n2 = 0. then
+                nan
+            else
+                n1 / n2
+
+        match input with
+        | Value (TypedTerm(TypedNumberTerm(NumberTerm v1))) -> NumberTerm v1
+        | Value (StructureTerm(Structure(functor', args))) ->
             match functor' with
-            | "+" when args.Length = 2 -> executeCalc (Plus(CalcAny(args.[0]), CalcAny(args.[1])))
-            | "-" when args.Length = 2 -> executeCalc (Subsctruct(CalcAny(args.[0]), CalcAny(args.[1])))
-            | "*" when args.Length = 2 -> executeCalc (Multiply(CalcAny(args.[0]), CalcAny(args.[1])))
-            | "/" when args.Length = 2 -> executeCalc (Division(CalcAny(args.[0]), CalcAny(args.[1])))
-            | "-" when args.Length = 1 -> executeCalc (Invert(CalcAny(args.[0])))
-            | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(CalcAny(args.[0])))
-            | "log" when args.Length = 2 -> executeCalc (Log(CalcAny(args.[0]), CalcAny(args.[1])))
-            | _ -> failwith "Cant find according calc functor'"
-        | Plus (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 + v2
-        | Subsctruct (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 - v2
-        | Multiply (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 * v2
-        | Division (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v2)))) -> NumberTerm <| v1 / v2
-        | Invert (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm(-v1)
-        | Sqrt (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1)))) -> NumberTerm <| System.Math.Sqrt v1
-        | Log (CalcAny(TypedTerm(TypedNumberTerm(NumberTerm v1))), CalcAny(TypedTerm(TypedNumberTerm(NumberTerm n)))) -> NumberTerm <| System.Math.Log(v1, float n)
-        | _ -> failwith "incorrect calc expression called"
+            | "+" when args.Length = 2 -> executeCalc (Plus(Value(args.[0]), Value(args.[1])))
+            | "-" when args.Length = 2 -> executeCalc (Subsctruct(Value(args.[0]), Value(args.[1])))
+            | "*" when args.Length = 2 -> executeCalc (Multiply(Value(args.[0]), Value(args.[1])))
+            | "/" when args.Length = 2 -> executeCalc (Division(Value(args.[0]), Value(args.[1])))
+            | "-" when args.Length = 1 -> executeCalc (Invert(Value(args.[0])))
+            | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(Value(args.[0])))
+            | "log" when args.Length = 2 -> executeCalc (Log(Value(args.[0]), Value(args.[1])))
+            | _ as c -> failwithf "Cant find according calc functor'. %A" c
+        | Plus (c1, c2) -> op2Inner (+) c1 c2
+        | Subsctruct (c1, c2) -> op2Inner (-) c1 c2
+        | Multiply (c1, c2) -> op2Inner (*) c1 c2
+        | Division (c1, c2) -> op2Inner safeDelete c1 c2
+        | Invert (c1) -> op1Inner (~-) c1
+        | Sqrt (c1) -> op1Inner System.Math.Sqrt c1
+        | Log (c1, c2) -> op2Inner (fun v n -> System.Math.Log(v, n)) c1 c2
+        | _ as c -> failwithf "incorrect calc expression called. %A" c
 
     // TODO: maybe we should unify each time we execute expression?
     let rec executeExpression (expr: Expression) executeCustom changeVariableFn =

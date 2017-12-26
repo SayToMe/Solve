@@ -11,20 +11,21 @@ module Rule =
     type Parameter = Parameter of Term
 
     type Signature = Signature of string * Parameter list
+        with
+        override self.ToString() =
+            let (Signature(name, parameters)) = self
+            sprintf "%s/%d" name parameters.Length
     type Goal = Goal of Structure
 
-    [<AutoOpenAttribute>]
-    module CalcModule =
-        type Calc =
-            | Value of CalcTerm
-            | Plus of CalcTerm * CalcTerm
-            | Subsctruct of CalcTerm * CalcTerm
-            | Invert of CalcTerm
-            | Multiply of CalcTerm * CalcTerm
-            | Division of CalcTerm * CalcTerm
-            | Sqrt of CalcTerm
-            | Log of CalcTerm * CalcTerm
-        and CalcTerm = CalcAny of Term | CalcInner of Calc
+    type Calc =
+        | Value of Term
+        | Plus of Calc * Calc
+        | Subsctruct of Calc * Calc
+        | Invert of Calc
+        | Multiply of Calc * Calc
+        | Division of Calc * Calc
+        | Sqrt of Calc
+        | Log of Calc * Calc
 
     type Expression =
         | True

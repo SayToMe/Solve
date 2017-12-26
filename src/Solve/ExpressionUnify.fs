@@ -12,10 +12,10 @@ module ExpressionUnify =
     let rec unifyCalc changeVariable v =
         let rec changeCalcTermIfVariable =
             function
-            | CalcInner c -> CalcInner(unifyCalc changeVariable c)
-            | CalcAny(VariableTerm(v)) -> CalcAny(changeVariable v)
-            | CalcAny(TypedTerm(v)) -> CalcAny(TypedTerm(v))
-            | CalcAny(StructureTerm(v)) -> CalcAny(StructureTerm(processStruct changeVariable v))
+            | Value(VariableTerm(v)) -> Value(changeVariable v)
+            | Value(TypedTerm(v)) -> Value(TypedTerm(v))
+            | Value(StructureTerm(v)) -> Value(StructureTerm(processStruct changeVariable v))
+            | _ as c -> unifyCalc changeVariable c
         match v with
         | Plus (v1, v2) -> Plus(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
         | Subsctruct (v1, v2) -> Subsctruct(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
@@ -24,7 +24,7 @@ module ExpressionUnify =
         | Invert (v1) -> Invert(changeCalcTermIfVariable v1)
         | Sqrt (v1) -> Sqrt(changeCalcTermIfVariable v1)
         | Log (v1, n) -> Log(changeCalcTermIfVariable v1, changeCalcTermIfVariable n)
-        | Value(v) -> Value(changeCalcTermIfVariable v)
+        | Value(_) as self -> changeCalcTermIfVariable self
 
     let rec unifyExpression expression changeVariable =
         match expression with

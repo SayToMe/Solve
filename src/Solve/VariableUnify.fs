@@ -5,12 +5,13 @@ open TermTypes
 open Rule
 
 module VariableUnify =
+    let changeIfVariable changeVariable =
+        function
+        | VariableTerm(v) -> changeVariable v
+        | a -> a
+
     let processStruct changeVariable (Structure(functor', prms)) =
-        let changeIfVariable =
-            function
-            | VariableTerm(v) -> changeVariable v
-            | a -> a
-        Structure(functor', prms |> List.map changeIfVariable)
+        Structure(functor', prms |> List.map (changeIfVariable changeVariable))
 
     let rec unifyTwoAny v1 v2 =
         match (v1, v2) with
