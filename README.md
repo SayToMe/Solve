@@ -13,10 +13,15 @@ This library is an educational presentation of language Prolog in a sweet syntax
 * Lazy execution
 * Cut operator
 * Not operator
+* Prolog code parser
 
 Features are going to be implemented:
 * Standard library
 * Wild card
+
+TODO:
+Switch to .NET Core
+Unification shouldn't be one-directed
 
 ## Requirements
 
