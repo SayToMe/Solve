@@ -28,7 +28,6 @@ rule read =
   | int      { INT (int (lexeme lexbuf)) }
   | "true"   { TRUE }
   | "false"  { FALSE }
-  | "null"   { NULL }
   | '"'      { read_string "" false lexbuf } 
   | '('      { LEFT_BRACKET }
   | ')'      { RIGHT_BRACKET }

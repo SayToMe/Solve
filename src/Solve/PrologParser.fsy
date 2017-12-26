@@ -21,7 +21,6 @@ type ParseResult =
 %token IS
 %token TRUE
 %token FALSE
-%token NULL
 %token LEFT_BRACKET
 %token RIGHT_BRACKET
 %token LEFT_BRACK
