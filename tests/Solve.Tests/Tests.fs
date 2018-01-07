@@ -398,6 +398,22 @@ module RuleTests =
         |> checkSolve [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
         
     [<Test; MemoryReport>]
+    let testParentBidirectRule_person_first() =
+        let biparent_pf = Rule(Signature("biparent_person_first", [vp "P"; vp "C"]), AndExpression(CallExpression(goal("person", [va "P"])), AndExpression(CallExpression(goal("person", [va "C"])), CallExpression(goal("parent", [va "P"; va "C"])))))
+        let knowledgebase = knowledgebase@[biparent_pf]
+        
+        solve (goal("biparent_person_first", [va "Parent"; va "Descendant"])) knowledgebase
+        |> checkSolve [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]; [stringAny "Solniwko"; stringAny "Polina"]]
+        
+    [<Test; MemoryReport>]
+    let testParentBidirectRule_person_last() =
+        let biparent_pl = Rule(Signature("biparent_person_last", [vp "P"; vp "C"]), AndExpression(CallExpression(goal("parent", [va "P"; va "C"])),  AndExpression(CallExpression(goal("person", [va "P"])),CallExpression(goal("person", [va "C"])))))
+        let knowledgebase = knowledgebase@[biparent_pl]
+        
+        solve (goal("biparent_person_last", [va "Parent"; va "Descendant"])) knowledgebase
+        |> checkSolve [[stringAny "Mary"; stringAny "Polina"]; [stringAny "Solniwko"; stringAny "Polina"]; [stringAny "Polina"; stringAny "Evgeniy"]]
+        
+    [<Test; MemoryReport>]
     let testNotParentRule() =
         solve (goal("notParent", [va "NotParent"])) knowledgebase
         |> checkSolve [[stringAny "Evgeniy"]]
