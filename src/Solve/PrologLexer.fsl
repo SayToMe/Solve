@@ -38,6 +38,7 @@ rule read =
   | '-'      { MINUS }
   | '*'      { ASTERISK }
   | '/'      { SLASH }
+  | '|'      { VERTICAL_BAR }
   | ','      { COMMA }
   | ';'      { SEMICOLON }
   | '.'      { DOT }

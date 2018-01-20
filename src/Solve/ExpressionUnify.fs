@@ -39,17 +39,21 @@ module ExpressionUnify =
             | VariableTerm v -> ResultExpression (changeVariable v)
             | TypedTerm _ -> expression
             | StructureTerm(v) -> ResultExpression(StructureTerm(processStruct changeVariable v))
+            | ListTerm v -> ResultExpression(ListTerm(processList changeVariable v))
         | CallExpression(Goal(Structure(goalName, arguments))) ->
             let newGoalArgs =
-                List.map (function
+                arguments
+                |> List.map (function
                             | VariableTerm(v) -> Argument(changeVariable v)
                             | TypedTerm(v) -> Argument(TypedTerm(v))
-                            | StructureTerm(v) -> Argument(StructureTerm(processStruct changeVariable v))) arguments
+                            | StructureTerm(v) -> Argument(StructureTerm(processStruct changeVariable v))
+                            | ListTerm(v) -> Argument(ListTerm(processList changeVariable v)))
             CallExpression (Goal(Structure(goalName, fromArgs newGoalArgs)))
         | CalcExpr (v, c) ->
             match v with
             | VariableTerm(vv) -> CalcExpr(changeVariable vv, unifyCalc changeVariable c)
             | TypedTerm(v) -> CalcExpr(TypedTerm(v), unifyCalc changeVariable c)
+            | ListTerm _
             | StructureTerm _ -> failwith "Calc of custom struct is not implemented yet"
         | EqExpr (e1, e2) -> postUnifyBinaryExpression changeVariable EqExpr e1 e2
         | GrExpr (e1, e2) -> postUnifyBinaryExpression changeVariable GrExpr e1 e2
@@ -86,12 +90,11 @@ module ExpressionUnify =
     let unifyExpressionByParams parameters arguments expression =
         let changeVariable (Parameter(p)) a =
             let retIfEquals variable result v = if v = variable then result else VariableTerm(v)
+
             match (p, a) with
-            | VariableTerm(v1), VariableTerm(v2) -> fun v -> if v = v2 then VariableTerm v1 else VariableTerm v
-            | VariableTerm(v1), TypedTerm(_) -> retIfEquals v1 a
-            | VariableTerm(v1), StructureTerm(_) -> retIfEquals v1 a
-            | TypedTerm(_), VariableTerm(v2) -> retIfEquals v2 p
-            | StructureTerm(_), VariableTerm(v2) -> retIfEquals v2 p
+            //| VariableTerm(v1), VariableTerm(v2) -> fun v -> retIfEquals v a v if v = v2 then VariableTerm v1 else VariableTerm v
+            | VariableTerm(v1), _ -> retIfEquals v1 a
+            | _, VariableTerm(v2) -> retIfEquals v2 p
             | _ -> fun x -> VariableTerm x
 
         unifyParamsWithArguments parameters arguments

@@ -10,11 +10,10 @@ open VariableUnify
 open Execute
 
 module Solve =
-    let rec solve goal knowledgeBase =
-        let checkAppliable (Goal(Structure(name, goalArguments))) (Rule(Signature(ruleName, ruleParams), _)) =
-            let arguments = toArgs goalArguments
-            name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams arguments)
+    let checkAppliable (Goal(Structure(name, goalArguments))) (Rule(Signature(ruleName, ruleParams), _)) =
+        name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams (toArgs goalArguments))
 
+    let rec solve goal knowledgeBase =
         knowledgeBase
         |> List.filter (checkAppliable goal)
         |> List.toSeq

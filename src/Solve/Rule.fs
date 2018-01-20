@@ -51,6 +51,7 @@ module Rule =
             | Parameter(VariableTerm v) -> ResultExpression (VariableTerm v)
             | Parameter(TypedTerm v) -> ResultExpression (TypedTerm v)
             | Parameter(StructureTerm(v)) -> ResultExpression(StructureTerm(v))
+            | Parameter(ListTerm(v)) -> ResultExpression(ListTerm(v))
 
         [<DebuggerStepThrough>]
         let signature (name: string) (prms: Term list) =
@@ -59,12 +60,12 @@ module Rule =
         [<DebuggerStepThrough>]    
         let fromArgs = List.map (fun (Argument(a)) -> a)
         [<DebuggerStepThrough>]
-        let toArgs = List.map (fun a -> Argument(a))
+        let toArgs = List.map Argument
 
         [<DebuggerStepThrough>]
         let fromParams = List.map (fun (Parameter(a)) -> a)
         [<DebuggerStepThrough>]
-        let toParams = List.map (fun a -> Parameter(a))
+        let toParams = List.map Parameter
 
         [<DebuggerStepThrough>]
         let formatResult (result: Result) =

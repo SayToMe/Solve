@@ -75,6 +75,7 @@ module Execute =
             function
             | VariableTerm(v) -> changeVariable v
             | a -> a
+        // TODO check structure execute is correct
         let executeBinaryExpression functor' condition e1 e2 =
             // Hack for equality check
             let conditionIsEquality = condition (TypedNumberTerm(NumberTerm(1.))) (TypedNumberTerm(NumberTerm(1.)))
@@ -85,8 +86,10 @@ module Execute =
             | (VariableTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e2, e2))
             | (VariableTerm(_), TypedTerm(_)) -> Seq.singleton (functor'(e2, e2))
             | (VariableTerm(_), StructureTerm(_)) -> Seq.singleton (functor'(e2, e2))
+            | (VariableTerm(_), ListTerm(_)) -> Seq.singleton (functor'(e2, e2))
             | (TypedTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e1, e1))
             | (StructureTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e1, e1))
+            | (ListTerm(_), VariableTerm(_)) -> Seq.singleton (functor'(e1, e1))
             | (TypedTerm(v1), TypedTerm(v2)) ->
                 if condition v1 v2 then
                     Seq.singleton (functor'(e1, e2))
@@ -97,6 +100,21 @@ module Execute =
                     Seq.singleton (functor'(e1, e2))
                 else
                     Seq.empty
+            | (ListTerm l1, ListTerm l2) ->
+                let rec procList2 l1 l2 =
+                    match l1, l2 with
+                    | NilTerm, NilTerm -> Some (NilTerm, NilTerm)
+                    | VarListTerm _, _ -> Some (l2, l2)
+                    | _, VarListTerm _ -> Some (l1, l1)
+                    | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
+                        let t1 = changeIfVariable changeVariableFn t1
+                        let t2 = changeIfVariable changeVariableFn t2
+                        procList2 r1 r2
+                        |> Option.bind(fun (p1, p2) -> Some(TypedListTerm(t1, p1), TypedListTerm(t2, p2)))
+                    | _ -> None
+                match procList2 l1 l2 with
+                | Some (p1, p2) -> Seq.singleton (functor'(ListTerm(p1), ListTerm(p2)))
+                | None -> Seq.empty
             | _ -> failwith "unexpected execute binary expression arguments"
         match expr with
         | True -> Seq.singleton True

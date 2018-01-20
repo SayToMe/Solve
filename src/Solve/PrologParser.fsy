@@ -10,6 +10,9 @@ open Solve.Rule.Transformers
 type ParseResult =
     | RuleParseResult of Rule
     | CallParseResult of Goal
+
+let getVarFromTerm (VariableTerm(v)) = v
+
 %}
 
 %start start
@@ -30,6 +33,7 @@ type ParseResult =
 %token MINUS
 %token ASTERISK
 %token SLASH
+%token VERTICAL_BAR
 %token COMMA
 %token SEMICOLON
 %token DOT
@@ -93,8 +97,19 @@ calcExpr:
 	| calcExpr MINUS calcExpr { Subsctruct($1, $3) }
 	| calcExpr ASTERISK calcExpr { Multiply($1, $3) }
 	| calcExpr SLASH calcExpr { Division($1, $3) }
+	
+var:
+    | VAR { VariableTerm(Variable($1)) }
 
 term:
+	| LEFT_BRACK listTerm RIGHT_BRACK { ListTerm($2) }
 	| INT { TypedTerm(TypedNumberTerm(NumberTerm (float $1))) }
-	| VAR { VariableTerm(Variable($1)) }
+	| var { $1 }
 	| ATOM { TypedTerm(TypedAtomTerm(AtomTerm ($1))) }
+
+listTerm:
+    | var { VarListTerm(getVarFromTerm $1) }
+	| term { TypedListTerm($1, NilTerm) }
+    | term COMMA listTerm { TypedListTerm($1, $3) }
+	| term VERTICAL_BAR VAR { TypedListTerm($1, VarListTerm(Variable($3))) }
+	| { NilTerm }
