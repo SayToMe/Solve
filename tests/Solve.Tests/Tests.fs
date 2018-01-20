@@ -52,7 +52,13 @@ let charA c = Argument(TypedTerm(TypedCharTerm(CharTerm(c))))
 let charAny c = TypedTerm(TypedCharTerm(CharTerm(c)))
 
 [<DebuggerStepThrough>]
-let stringAny (str: string) = TypedTerm(TypedListTerm(ListTerm(str.ToCharArray() |> Array.map (CharTerm >> TypedCharTerm) |> Array.toList)))
+let rec stringAny (str: string) = 
+    let rec strImpl idx =
+        if idx >= str.Length then
+            NilTerm
+        else
+            TypedListTerm(charAny str.[idx], strImpl (idx + 1))
+    ListTerm(strImpl 0)
 
 [<DebuggerStepThrough>]
 let goal (name, args) = Goal(Structure(name, fromArgs args))
@@ -428,7 +434,7 @@ module RuleTests =
         solve (goal("grandparent", [Argument(stringAny "Mary"); Argument(stringAny "Evgeniy")])) knowledgebase
         |> checkSolve [[stringAny "Mary"; stringAny "Evgeniy"]]
 
-    //[<Test; MemoryReport>]
+    [<Test; MemoryReport>]
     let bigTest() =
         let r = System.Random()
         let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person
@@ -449,7 +455,107 @@ module RuleTests =
         toTest |> List.map (fun t -> solve t kb |> Seq.toList) |> ignore
 
 [<TestFixture>]
+module ListTests =
+    open VariableUnify
+    open ExpressionUnify
+    
+    let headRule = Rule(Signature("head", [vp "E"; vp "L"]), EqExpr(ListTerm(TypedListTerm(var "E", VarListTerm(Variable("R")))), var "L"))
+    let tailRule = Rule(Signature("tail", [vp "L"; vp "T"]), EqExpr(ListTerm(TypedListTerm(var "E", VarListTerm(Variable("T")))), var "L"))
+    let memberRule = Rule(Signature("member", [vp "E"; vp "L"]), OrExpression(CallExpression(goal("head", [va "E"; va "L"])), AndExpression(CallExpression(goal("tail", [va "L"; va "T"])), CallExpression(goal("member", [va "E"; va "T"])))))
+    
+    let knowledgebase = [headRule; tailRule; memberRule]
+    
+    [<Test; MemoryReport>]
+    let listDefinition() =
+        Assert.AreEqual(stringAny "", ListTerm(NilTerm))
+        Assert.AreEqual(stringAny "12", ListTerm(TypedListTerm(charAny '1', TypedListTerm(charAny '2', NilTerm))))
+
+    [<Test; MemoryReport>]
+    let ``test empty list head``() =
+        solve (goal("head", [va "E"; Argument(stringAny "")])) knowledgebase
+        |> checkSolve []
+
+    [<Test; MemoryReport>]
+    let ``test any elements list head``() =
+        solve (goal("head", [va "E"; Argument(stringAny "1")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "1"]]
+        solve (goal("head", [va "E"; Argument(stringAny "12")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "1"]]
+
+    [<Test; MemoryReport>]
+    let ``test empty list tail``() =
+        solve (goal("tail", [va "E"; Argument(stringAny "")])) knowledgebase
+        |> checkSolve []
+
+    [<Test; MemoryReport>]
+    let ``test one element list tail``() =
+        solve (goal("tail", [va "E"; Argument(stringAny "1")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny ""]]
+        
+    [<Test; MemoryReport>]
+    let ``test any elements list tail``() =
+        solve (goal("tail", [va "E"; Argument(stringAny "12")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "2"]]
+        solve (goal("tail", [va "E"; Argument(stringAny "123")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "23"]]
+
+    [<Test; MemoryReport>]
+    let ``test variable elements list tail``() =
+        solve (goal("tail", [va "E"; Argument(ListTerm(TypedListTerm(sn 1., VarListTerm(Variable("F")))))])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "E"]]
+
+    //[<Test; MemoryReport>]
+    let ``test empty list member``() =
+        solve (goal("member", [va "E"; Argument(stringAny "")])) knowledgebase
+        |> checkSolve []
+
+    //[<Test; MemoryReport>]
+    let ``test defined list member``() =
+        solve (goal("member", [va "E"; Argument(stringAny "123")])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "1"]; [var "E"; stringAny "2"]; [var "E"; stringAny "3"]]
+    
+    //[<Test; MemoryReport>]
+    let ``test partly defined list member``() =
+        solve (goal("member", [va "E"; Argument(ListTerm(TypedListTerm(sn 1., TypedListTerm(sn 2., VarListTerm(Variable("F"))))))])) knowledgebase
+        |> checkSolve [[var "E"; stringAny "1"]; [var "E"; stringAny "2"]; [var "E"; stringAny "E"]]
+
+    [<Test; MemoryReport>]
+    let ``test var list params unification with var list arg``() = 
+        unifyParamsWithArguments [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))] [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]
+        |> check (Some([ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]))
+
+    [<Test; MemoryReport>]
+    let ``test var list rule unification with var list``() = 
+        unifyRule (Rule(Signature("eqvarlist", [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]), True)) [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm)))]
+        |> check (Some(Rule(Signature("eqvarlist", [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]), True)))
+
+    [<Test; MemoryReport>]
+    let ``test var list unification with var list``() =
+        solve (goal("un", [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm)))])) [Rule(Signature("un", [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]), True)]
+        |> checkSolve [[ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm))]]
+
+open Solve.Parse
+open PrologParser
+
+[<TestFixture>]
 module ParserTests =
+    [<Test; MemoryReport>]
+    let checkEmptyListParse() =
+        parse "?- list([])."
+        |> check (Some(CallParseResult(Goal(Structure("list", [ListTerm(NilTerm)])))))
+        
+    [<Test; MemoryReport>]
+    let checkDefinedListParse() =
+        parse "?- list([1,2,3])."
+        |> check (Some(CallParseResult(Goal(Structure("list", [ListTerm(TypedListTerm(sn 1., TypedListTerm(sn 2., TypedListTerm(sn 3., NilTerm))))])))))
+
+    [<Test; MemoryReport>]
+    let checkPartlyDefinedListParse() =
+        parse "?- list([1 | X])."
+        |> check (Some(CallParseResult(Goal(Structure("list", [ListTerm(TypedListTerm(sn 1., VarListTerm(Variable("X"))))])))))
+
+[<TestFixture>]
+module InteractiveTests =
     let interactive = Solve.Interactive()
 
     [<Test; MemoryReport>]
@@ -470,6 +576,7 @@ module ParserTests =
     [<Test; MemoryReport>]
     let parseAndRule() =
         interactive.NewInput "rule(X, Y) :- X = 1, Y = 2." |> check (RuleInfo(Rule(Signature("rule", [vp "X"; vp "Y"]), AndExpression(EqExpr(var "X", sn 1.), EqExpr(var "Y", sn 2.)))))
+    
     [<Test; MemoryReport>]
     let parseOrRule() =
         interactive.NewInput "rule(X, Y) :- X = 1 ; Y = 2." |> check (RuleInfo(Rule(Signature("rule", [vp "X"; vp "Y"]), OrExpression(EqExpr(var "X", sn 1.), EqExpr(var "Y", sn 2.)))))
