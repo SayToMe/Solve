@@ -10,7 +10,7 @@ open Execute
 
 module Solve =
     let private checkAppliable (Goal(Structure(name, goalArguments))) (Rule(Signature(ruleName, ruleParams), _)) =
-        name = ruleName && Option.isSome(unifyParamsWithArguments ruleParams (toArgs goalArguments))
+        name = ruleName && Option.isSome(unifyParametersWithArguments ruleParams (toArgs goalArguments))
 
     let rec solve (goal: Goal) (knowledgeBase: Rule list) =
         knowledgeBase

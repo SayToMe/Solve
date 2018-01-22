@@ -145,64 +145,19 @@ module VariableUnifyTests =
         |> check (Structure("test", [var "N1"; num 1.; num 1.]))
         
     [<Test; MemoryReport>]
-    let ``post unify unary expressions``() =
-        let changeVariable = getChangeVariableFunction "N" 10.
-        
-        VariableUnify.backwardsTermUnification (num 10.) (num 5.) changeVariable (Variable("N"))
-        |> check (num 10.)
-        VariableUnify.backwardsTermUnification (num 10.) (num 5.) changeVariable (Variable("N2"))
-        |> check (num 5.)
-        VariableUnify.backwardsTermUnification (var "N") (num 5.) changeVariable (Variable("N"))
-        |> check (var "N2")
-        VariableUnify.backwardsTermUnification (var "N") (var "N2") changeVariable (Variable("N"))
-        |> check (var "N2")
-
-    [<Test; MemoryReport>]
-    let ``post unify binary expression test``() =
-        let changeVariable = getChangeVariableFunction "N" 10.
-        let proc e =
-            match e with
-            | (TypedTerm(TypedNumberTerm(NumberTerm(e1))), TypedTerm(TypedNumberTerm(NumberTerm(e2)))) -> e1 + e2
-            | _ -> fail()
-            
-        VariableUnify.postUnifyBinaryExpression changeVariable proc (num 10.) (num 10.)
-        |> check 20.
-        VariableUnify.postUnifyBinaryExpression changeVariable proc (var "N") (num 10.)
-        |> check 20.
-        VariableUnify.postUnifyBinaryExpression changeVariable proc (num 10.) (var "N")
-        |> check 20.
-        
-    [<Test; MemoryReport>]
-    let ``post unify binary expressions test``() =
-        let changeVariable = getChangeVariableFunction "N" 10.
-        
-        VariableUnify.postUnifyBinaryExpressions (num 10., num 10.) (num 5., num 5.) changeVariable (Variable("N"))
-        |> check (num 10.)
-        VariableUnify.postUnifyBinaryExpressions (num 10., num 10.) (num 5., num 5.) changeVariable (Variable("N2"))
-        |> check (var "N2")
-        VariableUnify.postUnifyBinaryExpressions (var "N", num 10.) (num 5., num 5.) changeVariable (Variable("N"))
-        |> check (num 5.)
-        VariableUnify.postUnifyBinaryExpressions (num 10., var "N") (num 5., num 5.) changeVariable (Variable("N"))
-        |> check (num 5.)
-        VariableUnify.postUnifyBinaryExpressions (var "N", num 10.) (var "N2", num 5.) changeVariable (Variable("N"))
-        |> check (var "N2")
-        VariableUnify.postUnifyBinaryExpressions (num 10., var "N") (num 5., var "N2") changeVariable (Variable("N"))
-        |> check (var "N2")
-        
-    [<Test; MemoryReport>]
     let ``post unify params with arguments test3``() =
-        VariableUnify.unifyParamsWithArguments [snp 10.; snp 5.; vp "V"] [sna 10.; sna 5.; va "V"]
+        VariableUnify.unifyParametersWithArguments [snp 10.; snp 5.; vp "V"] [sna 10.; sna 5.; va "V"]
         |> check (Some([num 10.; num 5.; var "V"]))
-        VariableUnify.unifyParamsWithArguments [snp 10.; snp 5.; vp "V"] [va "V"; va "V"; va "V"]
+        VariableUnify.unifyParametersWithArguments [snp 10.; snp 5.; vp "V"] [va "V"; va "V"; va "V"]
         |> check (Some([num 10.; num 5.; var "V"]))
-        VariableUnify.unifyParamsWithArguments [vp "V"; vp "V"; vp "V"] [sna 10.; sna 5.; va "V"]
+        VariableUnify.unifyParametersWithArguments [vp "V"; vp "V"; vp "V"] [sna 10.; sna 5.; va "V"]
         |> check (Some([num 10.; num 5.; var "V"]))
 
-        VariableUnify.unifyParamsWithArguments [vp "N"] [va "N2"] |> check (Some([var "N"]))
-        VariableUnify.unifyParamsWithArguments [snp 1.] [va "N"] |> check (Some([num 1.]))
-        VariableUnify.unifyParamsWithArguments [vp "N"] [sna 1.] |> check (Some([num 1.]))
-        VariableUnify.unifyParamsWithArguments [snp 1.] [sna 1.] |> check (Some([num 1.]))
-        VariableUnify.unifyParamsWithArguments [snp 1.] [sna 2.] |> check None
+        VariableUnify.unifyParametersWithArguments [vp "N"] [va "N2"] |> check (Some([var "N"]))
+        VariableUnify.unifyParametersWithArguments [snp 1.] [va "N"] |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments [vp "N"] [sna 1.] |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments [snp 1.] [sna 1.] |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments [snp 1.] [sna 2.] |> check None
 
 [<TestFixture>]
 module SimpleTests =
@@ -505,7 +460,7 @@ module ListTests =
 
     [<Test; MemoryReport>]
     let ``test var list params unification with var list arg``() = 
-        unifyParamsWithArguments [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))] [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]
+        unifyParametersWithArguments [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))] [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]
         |> check (Some([ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]))
 
     [<Test; MemoryReport>]

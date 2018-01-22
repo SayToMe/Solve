@@ -27,6 +27,17 @@ module ExpressionUnify =
         | Value(_) as self -> changeCalcTermIfVariable self
 
     let rec unifyExpression expression changeVariable =
+        // TODO: check if there should be inner structure unification
+        let postUnifyBinaryExpression (proc: Variable -> Term) (functor': Term * Term -> 'a) (t1: Term) (t2: Term) =
+            match (t1, t2) with
+            | (VariableTerm(v1), VariableTerm(v2)) -> functor'(proc v1, proc v2)
+            | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, t2)
+            | (VariableTerm(v1), StructureTerm(v2)) -> functor'(proc v1, StructureTerm(changeVariablesForStruct proc v2))
+            | (TypedTerm(_), VariableTerm(v2)) -> functor'(t1, proc v2)
+            | (StructureTerm(v1), VariableTerm(v2)) -> functor'(StructureTerm(changeVariablesForStruct proc v1), proc v2)
+            | (ListTerm(l1), ListTerm(l2)) -> functor'(ListTerm(changeVariablesForList proc l1), ListTerm(changeVariablesForList proc l2))
+            | _ -> functor'(t1, t2)
+
         match expression with
         | True -> True
         | False -> False
@@ -62,6 +73,19 @@ module ExpressionUnify =
 
     // returns change variable functions according to execution branches
     let getChangedVariableFns initialExpression expression =
+        /// There is a matching between t1 and t2 terms. After execution there could be changed variables that should be catched by every existing variable
+        let backwardsTermUnification (t1: Term) (t2: Term) (fn: Variable -> Term) (v: Variable) =
+            match t1 with
+            | VariableTerm(v1) when v1 = v -> t2
+            | _ -> fn v
+            
+        let postUnifyBinaryExpressions ((t1, t2): Term * Term) ((t3, t4): Term * Term) (fn: Variable -> Term) (v: Variable) =
+            if VariableTerm(v) = t1 then
+                t3 
+            else if VariableTerm(v) = t2 then 
+                t4 
+            else fn v
+        
         let rec _getChangedVariableFn initialExpression expression (changedVariableFns: (Variable -> Term) list) =
             match (initialExpression, expression) with
             | (True, True) -> changedVariableFns
@@ -87,25 +111,25 @@ module ExpressionUnify =
             | _ -> failwithf "failed to getChangedVariableFn result. %O != %O" initialExpression expression
         _getChangedVariableFn initialExpression expression [(fun v -> VariableTerm(v))]
         
-    let unifyExpressionByParams parameters arguments expression =
-        let changeVariable (Parameter(p)) a =
-            let retIfEquals variable result v = if v = variable then result else VariableTerm(v)
-
-            match (p, a) with
-            //| VariableTerm(v1), VariableTerm(v2) -> fun v -> retIfEquals v a v if v = v2 then VariableTerm v1 else VariableTerm v
-            | VariableTerm(v1), _ -> retIfEquals v1 a
-            | _, VariableTerm(v2) -> retIfEquals v2 p
-            | _ -> fun x -> VariableTerm x
-
-        unifyParamsWithArguments parameters arguments
-        |> Option.bind (fun unifiedArgs ->
-            let newExpr = 
-                List.zip parameters unifiedArgs
-                |> List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression
-            (newExpr, unifiedArgs)
-            |> Some)
-
     let unifyRule (Rule(Signature(name, parameters), body)) arguments =
+        let unifyExpressionByParams parameters arguments expression =
+            let changeVariable (Parameter(p)) a =
+                let retIfEquals variable result v = if v = variable then result else VariableTerm(v)
+
+                match (p, a) with
+                //| VariableTerm(v1), VariableTerm(v2) -> fun v -> retIfEquals v a v if v = v2 then VariableTerm v1 else VariableTerm v
+                | VariableTerm(v1), _ -> retIfEquals v1 a
+                | _, VariableTerm(v2) -> retIfEquals v2 p
+                | _ -> fun x -> VariableTerm x
+
+            unifyParametersWithArguments parameters arguments
+            |> Option.bind (fun unifiedArgs ->
+                let newExpr = 
+                    List.zip parameters unifiedArgs
+                    |> List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression
+                (newExpr, unifiedArgs)
+                |> Some)
+
         unifyExpressionByParams parameters arguments body
         |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
