@@ -141,22 +141,9 @@ module VariableUnifyTests =
     [<Test; MemoryReport>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
-        VariableUnify.processStruct changeVariable (Structure("test", [var "N1"; var "N"; var "N"]))
+        VariableUnify.changeVariablesForStruct changeVariable (Structure("test", [var "N1"; var "N"; var "N"]))
         |> check (Structure("test", [var "N1"; num 1.; num 1.]))
         
-    [<Test; MemoryReport>]
-    let ``unify two any test``() =
-        let checkFromVariableUnify a b =
-            VariableUnify.unifyConcreteRightToLeft a b |> check (Some b)
-            VariableUnify.unifyConcreteRightToLeft b a |> check (Some b)
-        checkFromVariableUnify (var "N") (var "N")
-        checkFromVariableUnify (var "N") (num 1.)
-        checkFromVariableUnify (var "N") (StructureTerm(Structure("123", [var "N1"])))
-
-        VariableUnify.unifyConcreteRightToLeft (var "N") (var "N") |> check (Some(var "N"))
-        checkFromVariableUnify (num 1.) (num 1.)
-        VariableUnify.unifyConcreteRightToLeft (num 1.) (num 2.) |> check None
-
     [<Test; MemoryReport>]
     let ``post unify unary expressions``() =
         let changeVariable = getChangeVariableFunction "N" 10.
@@ -164,9 +151,9 @@ module VariableUnifyTests =
         VariableUnify.backwardsTermUnification (num 10.) (num 5.) changeVariable (Variable("N"))
         |> check (num 10.)
         VariableUnify.backwardsTermUnification (num 10.) (num 5.) changeVariable (Variable("N2"))
-        |> check (var "N2")
-        VariableUnify.backwardsTermUnification (var "N") (num 5.) changeVariable (Variable("N"))
         |> check (num 5.)
+        VariableUnify.backwardsTermUnification (var "N") (num 5.) changeVariable (Variable("N"))
+        |> check (var "N2")
         VariableUnify.backwardsTermUnification (var "N") (var "N2") changeVariable (Variable("N"))
         |> check (var "N2")
 

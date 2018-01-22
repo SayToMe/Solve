@@ -14,7 +14,7 @@ module ExpressionUnify =
             function
             | Value(VariableTerm(v)) -> Value(changeVariable v)
             | Value(TypedTerm(v)) -> Value(TypedTerm(v))
-            | Value(StructureTerm(v)) -> Value(StructureTerm(processStruct changeVariable v))
+            | Value(StructureTerm(v)) -> Value(StructureTerm(changeVariablesForStruct changeVariable v))
             | _ as c -> unifyCalc changeVariable c
         match v with
         | Plus (v1, v2) -> Plus(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
@@ -38,16 +38,16 @@ module ExpressionUnify =
             match e with
             | VariableTerm v -> ResultExpression (changeVariable v)
             | TypedTerm _ -> expression
-            | StructureTerm(v) -> ResultExpression(StructureTerm(processStruct changeVariable v))
-            | ListTerm v -> ResultExpression(ListTerm(processList changeVariable v))
+            | StructureTerm(v) -> ResultExpression(StructureTerm(changeVariablesForStruct changeVariable v))
+            | ListTerm v -> ResultExpression(ListTerm(changeVariablesForList changeVariable v))
         | CallExpression(Goal(Structure(goalName, arguments))) ->
             let newGoalArgs =
                 arguments
                 |> List.map (function
                             | VariableTerm(v) -> Argument(changeVariable v)
                             | TypedTerm(v) -> Argument(TypedTerm(v))
-                            | StructureTerm(v) -> Argument(StructureTerm(processStruct changeVariable v))
-                            | ListTerm(v) -> Argument(ListTerm(processList changeVariable v)))
+                            | StructureTerm(v) -> Argument(StructureTerm(changeVariablesForStruct changeVariable v))
+                            | ListTerm(v) -> Argument(ListTerm(changeVariablesForList changeVariable v)))
             CallExpression (Goal(Structure(goalName, fromArgs newGoalArgs)))
         | CalcExpr (v, c) ->
             match v with
