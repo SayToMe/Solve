@@ -3,7 +3,6 @@
 open System.Diagnostics
 
 open TermTypes
-open TermTypes.Transformers
 
 module Rule =
     type Argument = Argument of Term
@@ -12,9 +11,10 @@ module Rule =
 
     type Signature = Signature of string * Parameter list
         with
-        override self.ToString() =
+        member self.AsString =
             let (Signature(name, parameters)) = self
             sprintf "%s/%d" name parameters.Length
+        override self.ToString() = self.AsString
     type Goal = Goal of Structure
 
     type Calc =

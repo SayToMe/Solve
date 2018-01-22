@@ -9,7 +9,7 @@ open VariableUnify
 open ExpressionUnify
 
 module Execute =
-    let rec executeCalc input =
+    let rec executeCalc (calc: Calc) =
         let getInnerNumber =
             function
             | Value (TypedTerm(TypedNumberTerm(x))) -> x
@@ -27,7 +27,7 @@ module Execute =
             else
                 n1 / n2
 
-        match input with
+        match calc with
         | Value (TypedTerm(TypedNumberTerm(NumberTerm v1))) -> NumberTerm v1
         | Value (StructureTerm(Structure(functor', args))) ->
             match functor' with
@@ -49,7 +49,7 @@ module Execute =
         | _ as c -> failwithf "incorrect calc expression called. %A" c
 
     // TODO: maybe we should unify each time we execute expression?
-    let rec executeExpression (expr: Expression) executeCustom changeVariableFn =
+    let rec executeExpression (expr: Expression) (executeCustom: Goal -> #seq<Term list>) (changeVariableFn: Variable -> Term) =
         let keepOnlyFirstCut exprs =
             let rec exprHasCut e =
                 match e with
@@ -175,7 +175,7 @@ module Execute =
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute (Goal(Structure(name, goalArguments))) rule executeCustom =
+    let execute (Goal(Structure(name, goalArguments))) (rule: Rule) (executeCustom: Goal -> #seq<Term list>) =
         let arguments = toArgs goalArguments
         match unifyRule rule arguments with
         | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 

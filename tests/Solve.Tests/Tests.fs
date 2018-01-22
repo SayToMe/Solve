@@ -150,27 +150,27 @@ module VariableUnifyTests =
     [<Test; MemoryReport>]
     let ``unify two any test``() =
         let checkFromVariableUnify a b =
-            VariableUnify.unifyTwoAny a b |> check (Some b)
-            VariableUnify.unifyTwoAny b a |> check (Some b)
+            VariableUnify.unifyConcreteRightToLeft a b |> check (Some b)
+            VariableUnify.unifyConcreteRightToLeft b a |> check (Some b)
         checkFromVariableUnify (sv "N") (sv "N")
         checkFromVariableUnify (sv "N") (sn 1.)
         checkFromVariableUnify (sv "N") (StructureTerm(Structure("123", [sv "N1"])))
 
-        VariableUnify.unifyTwoAny (sv "N") (sv "N") |> check (Some(sv "N"))
+        VariableUnify.unifyConcreteRightToLeft (sv "N") (sv "N") |> check (Some(sv "N"))
         checkFromVariableUnify (sn 1.) (sn 1.)
-        VariableUnify.unifyTwoAny (sn 1.) (sn 2.) |> check None
+        VariableUnify.unifyConcreteRightToLeft (sn 1.) (sn 2.) |> check None
 
     [<Test; MemoryReport>]
     let ``post unify unary expressions``() =
         let changeVariable = getChangeVariableFunction "N" 10.
         
-        VariableUnify.postUnifyUnaryExpressions (sn 10.) (sn 5.) changeVariable (Variable("N"))
+        VariableUnify.postUnifyBinaryExpression (sn 10.) (sn 5.) changeVariable (Variable("N"))
         |> check (sn 10.)
-        VariableUnify.postUnifyUnaryExpressions (sn 10.) (sn 5.) changeVariable (Variable("N2"))
+        VariableUnify.postUnifyBinaryExpression (sn 10.) (sn 5.) changeVariable (Variable("N2"))
         |> check (sv "N2")
-        VariableUnify.postUnifyUnaryExpressions (sv "N") (sn 5.) changeVariable (Variable("N"))
+        VariableUnify.postUnifyBinaryExpression (sv "N") (sn 5.) changeVariable (Variable("N"))
         |> check (sn 5.)
-        VariableUnify.postUnifyUnaryExpressions (sv "N") (sv "N2") changeVariable (Variable("N"))
+        VariableUnify.postUnifyBinaryExpression (sv "N") (sv "N2") changeVariable (Variable("N"))
         |> check (sv "N2")
 
     [<Test; MemoryReport>]

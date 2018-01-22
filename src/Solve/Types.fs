@@ -12,15 +12,15 @@ module TermTypes =
     
         and [<StructuredFormatDisplay("{AsString}")>] TypedTerm = TypedAtomTerm of AtomTerm | TypedBoolTerm of BoolTerm | TypedNumberTerm of NumberTerm | TypedCharTerm of CharTerm
         with
-        member a.AsString =
+        member self.AsString =
             let rec formatTyped =
                 function
                 | TypedAtomTerm(AtomTerm v) -> v.ToString()
                 | TypedBoolTerm(BoolTerm v) -> v.ToString()
                 | TypedNumberTerm(NumberTerm v) -> v.ToString()
                 | TypedCharTerm(CharTerm v) -> v.ToString()
-            formatTyped a
-        override a.ToString() = a.AsString
+            formatTyped self
+        override self.ToString() = self.AsString
 
     [<AutoOpen>]
     module Variable =
@@ -30,22 +30,22 @@ module TermTypes =
     [<StructuredFormatDisplay("{AsString}")>]
     type Term = VariableTerm of Variable | TypedTerm of TypedTerm | StructureTerm of Structure | ListTerm of TypedListTerm
         with
-        member a.AsString =
-            match a with
+        member self.AsString =
+            match self with
             | VariableTerm(Variable(v)) -> "~" + v + "~"
             | TypedTerm(typed) -> typed.AsString
             | StructureTerm(Structure(functor', parameters)) -> functor' + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
             | ListTerm(x) -> x.AsString
-        override a.ToString() = a.AsString
+        override self.ToString() = self.AsString
     and Structure = Structure of string * Term list
     and TypedListTerm = | NilTerm | VarListTerm of Variable | TypedListTerm of Term * TypedListTerm
         with
-        member a.AsString =
-            match a with
+        member self.AsString =
+            match self with
             | NilTerm -> "[]"
             | VarListTerm(v) -> "[" + (VariableTerm(v).AsString) + "]"
             | TypedListTerm(head, rest) -> "[" + head.AsString + "," + (ListTerm(rest)).AsString
-        override a.ToString() = a.AsString
+        override self.ToString() = self.AsString
 
     module Transformers =
         [<DebuggerStepThrough>]

@@ -5,31 +5,31 @@ open TermTypes
 open Rule
 
 module VariableUnify =
-    let changeIfVariable changeVariable =
+    let private changeIfVariable (changeVariable: Variable -> Term) =
         function
         | VariableTerm(v) -> changeVariable v
-        | a -> a
+        | term -> term
         
-    let processStruct changeVariable (Structure(functor', prms)) =
+    let processStruct (changeVariable: Variable -> Term) (Structure(functor', prms)) =
         Structure(functor', prms |> List.map (changeIfVariable changeVariable))
 
-    let rec processList (changeVariable: Variable -> Term) list =
+    let rec processList (changeVariable: Variable -> Term) (list: TypedListTerm) =
         match list with
-        | NilTerm -> list
+        | NilTerm -> NilTerm
         | VarListTerm v -> 
             match changeVariable v with
             | VariableTerm(v) -> VarListTerm(v)
             | term -> TypedListTerm(term, NilTerm)
         | TypedListTerm(t1, r1) -> TypedListTerm(changeIfVariable changeVariable t1, processList changeVariable r1)
 
-    let rec unifyTwoAny v1 v2 =
-        match (v1, v2) with
-        | (VariableTerm(_), VariableTerm(_)) -> Some v1
-        | (VariableTerm(_), _) -> Some v2
-        | (_, VariableTerm(_)) -> Some v1
-        | (TypedTerm(vt1), TypedTerm(vt2)) when vt1 = vt2 -> Some v2
+    let rec unifyConcreteRightToLeft (t1: Term) (t2: Term) =
+        match (t1, t2) with
+        | (VariableTerm(_), VariableTerm(_)) -> Some t2
+        | (VariableTerm(_), _) -> Some t2
+        | (_, VariableTerm(_)) -> Some t1
+        | (TypedTerm(vt1), TypedTerm(vt2)) when vt1 = vt2 -> Some t2
         | (StructureTerm(Structure(f1, p1)), StructureTerm(Structure(f2, p2))) when f1 = f2 && p1.Length = p2.Length ->
-            let newArgs = List.map2 (fun v1 v2 -> unifyTwoAny v1 v2) p1 p2
+            let newArgs = List.map2 (fun v1 v2 -> unifyConcreteRightToLeft v1 v2) p1 p2
             if List.exists Option.isNone newArgs then
                 None
             else
@@ -37,41 +37,41 @@ module VariableUnify =
                 Some(StructureTerm(Structure(f1, newArgs)))
         | (ListTerm(l1), ListTerm(l2)) ->
             match (l1, l2) with
-            | VarListTerm _, VarListTerm _ -> Some (v2)
-            | VarListTerm _, _ -> Some (v2)
-            | _, VarListTerm _ -> Some (v1)
-            | NilTerm, NilTerm -> Some v1
+            | VarListTerm _, VarListTerm _ -> Some (t2)
+            | VarListTerm _, _ -> Some (t2)
+            | _, VarListTerm _ -> Some (t1)
+            | NilTerm, NilTerm -> Some t1
             | TypedListTerm(l1, r1), TypedListTerm(l2, r2) -> 
-                unifyTwoAny l1 l2 |> Option.bind (fun l -> unifyTwoAny (ListTerm r1) (ListTerm r2) |> Option.bind (fun (ListTerm(r)) -> Some <| ListTerm(TypedListTerm(l, r))))
+                unifyConcreteRightToLeft l1 l2 |> Option.bind (fun l -> unifyConcreteRightToLeft (ListTerm r1) (ListTerm r2) |> Option.bind (fun (ListTerm(r)) -> Some <| ListTerm(TypedListTerm(l, r))))
             | _ -> None
         | _ -> None
         
-    let postUnifyUnaryExpressions v1 v2 fn v =
-        if VariableTerm(v) = v1 then 
-            v2 
+    let backwardsTermUnification (t1: Term) (t2: Term) (fn: Variable -> Term) (v: Variable) =
+        if VariableTerm(v) = t1 then 
+            t2 
         else 
             fn v
 
     // TODO: check if there should be inner structure unification
-    let postUnifyBinaryExpression proc functor' e1 e2 =
-        match (e1, e2) with
+    let postUnifyBinaryExpression (proc: Variable -> Term) (functor': Term * Term -> 'a) (t1: Term) (t2: Term) =
+        match (t1, t2) with
         | (VariableTerm(v1), VariableTerm(v2)) -> functor'(proc v1, proc v2)
-        | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, e2)
+        | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, t2)
         | (VariableTerm(v1), StructureTerm(v2)) -> functor'(proc v1, StructureTerm(processStruct proc v2))
-        | (TypedTerm(_), VariableTerm(v2)) -> functor'(e1, proc v2)
+        | (TypedTerm(_), VariableTerm(v2)) -> functor'(t1, proc v2)
         | (StructureTerm(v1), VariableTerm(v2)) -> functor'(StructureTerm(processStruct proc v1), proc v2)
         | (ListTerm(l1), ListTerm(l2)) -> functor'(ListTerm(processList proc l1), ListTerm(processList proc l2))
-        | _ -> functor'(e1, e2)
+        | _ -> functor'(t1, t2)
 
-    let postUnifyBinaryExpressions (v1, v2) (v3, v4) fn v =
-        if VariableTerm(v) = v1 then
-            v3 
-        else if VariableTerm(v) = v2 then 
-            v4 
+    let postUnifyBinaryExpressions ((t1, t2): Term * Term) ((t3, t4): Term * Term) (fn: Variable -> Term) (v: Variable) =
+        if VariableTerm(v) = t1 then
+            t3 
+        else if VariableTerm(v) = t2 then 
+            t4 
         else fn v
         
-    let rec unifyParamsWithArguments parameters arguments =
-        let prms = List.map2 (fun (Parameter(p)) (Argument(a)) -> unifyTwoAny p a) parameters arguments
+    let rec unifyParamsWithArguments (parameters: Parameter list) (arguments: Argument list) =
+        let prms = List.map2 (fun (Parameter(p)) (Argument(a)) -> unifyConcreteRightToLeft p a) parameters arguments
         if List.exists Option.isNone prms then
             None
         else

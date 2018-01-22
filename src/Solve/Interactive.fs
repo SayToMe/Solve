@@ -13,7 +13,7 @@ type InteractiveResult =
 type Interactive() =
     let mutable _knowledgebase = []
 
-    member self.NewInput text =
+    member self.NewInput (text: string) =
         match parse text with
         | Some (PrologParser.RuleParseResult(rule)) -> 
             _knowledgebase <- _knowledgebase@[rule]

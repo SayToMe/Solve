@@ -77,10 +77,10 @@ module ExpressionUnify =
                 let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
                 let changedFn2 = _getChangedVariableFn e2 e4 changedFn1
                 changedFn2
-            | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (postUnifyUnaryExpressions e1 e2)
+            | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (backwardsTermUnification e1 e2)
             | (CallExpression(Goal(Structure(name1, goalArgs1))), CallExpression(Goal(Structure(name2, goalArgs2)))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
-                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> postUnifyUnaryExpressions a1 a2 fns) fn goalArgs1 goalArgs2) changedVariableFns
-            | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (postUnifyUnaryExpressions v1 v2)
+                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> backwardsTermUnification a1 a2 fns) fn goalArgs1 goalArgs2) changedVariableFns
+            | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (backwardsTermUnification v1 v2)
             | (EqExpr(v1, v2), EqExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
             | (GrExpr(v1, v2), GrExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
             | (LeExpr(v1, v2), LeExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
