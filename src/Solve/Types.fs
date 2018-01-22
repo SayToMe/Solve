@@ -61,3 +61,5 @@ module TermTypes =
         
         [<DebuggerStepThrough>]
         let var = Variable >> VariableTerm
+        [<DebuggerStepThrough>]
+        let atom = AtomTerm >> TypedAtomTerm >> TypedTerm
