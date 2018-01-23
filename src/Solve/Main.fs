@@ -13,10 +13,13 @@ module Solve =
         name = ruleName && Option.isSome(unifyParametersWithArguments ruleParams (toArgs goalArguments))
 
     let rec solve (goal: Goal) (knowledgeBase: Rule list) =
+        let executeCustom custom =
+            solve custom knowledgeBase
+
         knowledgeBase
         |> List.filter (checkAppliable goal)
         |> List.toSeq
         |> Seq.collect (fun r ->
-            execute goal r (fun custom -> solve custom knowledgeBase)
+            execute goal r executeCustom
         )
 

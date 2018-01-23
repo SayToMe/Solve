@@ -240,7 +240,15 @@ module SimpleTests =
         |> checkSolve [[num 1.]]
         
     [<Test; MemoryReport>]
-    let factorialTest() =
+    let ``test applicative state``() =
+        let r0 = RULE (SIGNATURE "F0" [num 1.]) True
+        let r1 = RULE (SIGNATURE "F1" [var "X"]) (AndExpression(CallExpression(GOAL "F0" [var "X"]), CallExpression(GOAL "F0" [var "X"])))
+        let r2 = RULE (SIGNATURE "F2" [var "X1"]) (AndExpression(CallExpression(GOAL "F1" [var "X1"]), AndExpression(CallExpression(GOAL "F1" [var "X1"]), CallExpression(GOAL "F1" [var "X1"]))))
+        solve (GOAL "F2" [var "N"]) [r0; r1; r2]
+        |> checkSolve [[num 1.]]
+
+    [<Test; MemoryReport>]
+    let ``test factorial rule``() =
         let leftOr = AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.))
         let rightOr = AndExpression(GrExpr(var "N", num 1.), AndExpression(CalcExpr(var "N1", Subsctruct(Value(var "N"), Value(num 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [var "N1"; var "R1"]))), CalcExpr(var "Res", Multiply(Value(var "R1"), Value(var "N"))))))
         let factorial = RULE(SIGNATURE "factorial" [var "N"; var "Res"]) (OrExpression(leftOr, rightOr))
@@ -343,7 +351,7 @@ module RuleTests =
         solve (GOAL "grandparent" [stringList "Mary"; stringList "Evgeniy"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Evgeniy"]]
 
-    [<Test; MemoryReport>]
+    //[<Test; MemoryReport>]
     let bigTest() =
         let r = System.Random()
         let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person

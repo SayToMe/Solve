@@ -177,13 +177,16 @@ module Execute =
     // All changed variables can be caught afterwards
     let execute (Goal(Structure(name, goalArguments))) (rule: Rule) (executeCustom: Goal -> #seq<Term list>) =
         let arguments = toArgs goalArguments
+
         match unifyRule rule arguments with
-        | Some (Rule(Signature(ruleName, unifiedRuleArgs), expr)) -> 
+        | Some (Rule(Signature(ruleName, unifiedRuleParameters), expr)) -> 
             if name = ruleName then
-                let changeVar = List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v)) unifiedRuleArgs arguments
+                let changeVar = 
+                    (unifiedRuleParameters, arguments)
+                    ||> List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v))
 
                 let results = executeExpression expr executeCustom changeVar
-                let postResults = Seq.map (unifyBack (fromParams unifiedRuleArgs) expr) results
+                let postResults = Seq.map (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results
                 postResults
             else
                 Seq.empty

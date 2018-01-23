@@ -133,7 +133,7 @@ module ExpressionUnify =
         unifyExpressionByParams parameters arguments body
         |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
-    let rec unifyBack arguments initialExpression expression =
+    let rec unifyResultToParameters arguments initialExpression expression =
         let unifyWithArgs args v1 v2 = args |> List.map (fun (a) -> if a = v1 then v2 else a)
 
         match (initialExpression, expression) with
@@ -141,9 +141,9 @@ module ExpressionUnify =
         | (False, False) -> []
         | (Cut, Cut) -> arguments
         | (_, NotExecuted _) -> arguments
-        | (NotExpression e1, NotExpression e2) -> unifyBack arguments e1 e2
-        | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
-        | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyBack (unifyBack arguments e1 e3) e2 e4
+        | (NotExpression e1, NotExpression e2) -> unifyResultToParameters arguments e1 e2
+        | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
+        | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
         | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
         | (CallExpression(Goal(Structure(name1, goalArgs1))), CallExpression(Goal(Structure(name2, goalArgs2)))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
             List.fold2 (fun args (arg1) (arg2) -> unifyWithArgs args arg1 arg2) arguments goalArgs1 goalArgs2
