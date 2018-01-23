@@ -56,10 +56,21 @@ module TermTypes =
 
         [<DebuggerStepThrough>]
         let char = CharTerm >> TypedCharTerm >> TypedTerm
+
         [<DebuggerStepThrough>]
         let string = CharTerm >> TypedCharTerm >> TypedTerm
         
         [<DebuggerStepThrough>]
         let var = Variable >> VariableTerm
+
         [<DebuggerStepThrough>]
         let atom = AtomTerm >> TypedAtomTerm >> TypedTerm
+        
+        [<DebuggerStepThrough>]
+        let rec stringList (str: string) = 
+            let rec strImpl idx =
+                if idx >= str.Length then
+                    NilTerm
+                else
+                    TypedListTerm(TypedTerm(TypedCharTerm(CharTerm(str.[idx]))), strImpl (idx + 1))
+            ListTerm(strImpl 0)

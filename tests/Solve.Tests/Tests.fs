@@ -30,36 +30,6 @@ let inline RULE signature body = Rule(signature, body)
 [<DebuggerStepThrough>]
 let inline GOAL name terms = Goal(Structure(name, terms))
 
-[<DebuggerStepThrough>]
-let snp x = Parameter(num x)
-[<DebuggerStepThrough>]
-let ap x = Parameter(atom x)
-[<DebuggerStepThrough>]
-let vp n = Parameter(VariableTerm(Variable(n)))
-[<DebuggerStepThrough>]
-let charP c = Parameter(TypedTerm(TypedCharTerm(CharTerm(c))))
-
-[<DebuggerStepThrough>]
-let sna x = Argument(num x)
-[<DebuggerStepThrough>]
-let saa x = Argument(atom x)
-[<DebuggerStepThrough>]
-let va n = Argument(VariableTerm(Variable(n)))
-[<DebuggerStepThrough>]
-let charA c = Argument(TypedTerm(TypedCharTerm(CharTerm(c))))
-
-[<DebuggerStepThrough>]
-let charAny c = TypedTerm(TypedCharTerm(CharTerm(c)))
-
-[<DebuggerStepThrough>]
-let rec str (str: string) = 
-    let rec strImpl idx =
-        if idx >= str.Length then
-            NilTerm
-        else
-            TypedListTerm(charAny str.[idx], strImpl (idx + 1))
-    ListTerm(strImpl 0)
-
 [<AutoOpen>]
 module NUnitExtensions =
     open System
@@ -146,18 +116,18 @@ module VariableUnifyTests =
         
     [<Test; MemoryReport>]
     let ``post unify params with arguments test3``() =
-        VariableUnify.unifyParametersWithArguments [snp 10.; snp 5.; vp "V"] [sna 10.; sna 5.; va "V"]
+        VariableUnify.unifyParametersWithArguments (toParams [num 10.; num 5.; var "V"]) (toArgs [num 10.; num 5.; var "V"])
         |> check (Some([num 10.; num 5.; var "V"]))
-        VariableUnify.unifyParametersWithArguments [snp 10.; snp 5.; vp "V"] [va "V"; va "V"; va "V"]
+        VariableUnify.unifyParametersWithArguments (toParams [num 10.; num 5.; var "V"]) (toArgs [var "V"; var "V"; var "V"])
         |> check (Some([num 10.; num 5.; var "V"]))
-        VariableUnify.unifyParametersWithArguments [vp "V"; vp "V"; vp "V"] [sna 10.; sna 5.; va "V"]
+        VariableUnify.unifyParametersWithArguments (toParams [var "V"; var "V"; var "V"]) (toArgs [num 10.; num 5.; var "V"])
         |> check (Some([num 10.; num 5.; var "V"]))
 
-        VariableUnify.unifyParametersWithArguments [vp "N"] [va "N2"] |> check (Some([var "N"]))
-        VariableUnify.unifyParametersWithArguments [snp 1.] [va "N"] |> check (Some([num 1.]))
-        VariableUnify.unifyParametersWithArguments [vp "N"] [sna 1.] |> check (Some([num 1.]))
-        VariableUnify.unifyParametersWithArguments [snp 1.] [sna 1.] |> check (Some([num 1.]))
-        VariableUnify.unifyParametersWithArguments [snp 1.] [sna 2.] |> check None
+        VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [var "N2"]) |> check (Some([var "N"]))
+        VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [var "N"]) |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [num 1.]) |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [num 1.]) |> check (Some([num 1.]))
+        VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [num 2.]) |> check None
 
 [<TestFixture>]
 module SimpleTests =
@@ -183,7 +153,7 @@ module SimpleTests =
 
     [<Test; MemoryReport>]
     let testUnifyRule() = 
-        unifyRule (RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))) [sna 1.]
+        unifyRule (RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))) (toArgs [num 1.])
         |> check (Some(RULE (SIGNATURE "eq1" [num 1.]) (EqExpr(num 1., num 1.))))
     
     open Execute
@@ -307,8 +277,8 @@ module SimpleTests =
 
 [<TestFixture>]
 module RuleTests =
-    let person p = RULE(SIGNATURE "person" [str p]) True
-    let parent p d = RULE(SIGNATURE "parent" [str p; str d]) True
+    let person p = RULE(SIGNATURE "person" [stringList p]) True
+    let parent p d = RULE(SIGNATURE "parent" [stringList p; stringList d]) True
     let notParent = RULE(SIGNATURE "notParent" [var "P"]) (AndExpression(CallExpression(GOAL "person" [var "P"]), NotExpression(AndExpression(CallExpression(GOAL "person" [var "C"]), CallExpression(GOAL "parent" [var "P"; var "C"])))))
     let grandparent = RULE(SIGNATURE "grandparent" [var "G"; var "D"]) (AndExpression(CallExpression(GOAL "parent" [var "G"; var "P"]), CallExpression(GOAL "parent" [var "P"; var "D"])))
 
@@ -328,19 +298,19 @@ module RuleTests =
 
     [<Test; MemoryReport>]
     let testPersonRule() =
-        solve (GOAL "person" [str "Polina"]) knowledgebase
-        |> checkSolve [[str "Polina"]]
+        solve (GOAL "person" [stringList "Polina"]) knowledgebase
+        |> checkSolve [[stringList "Polina"]]
         solve (GOAL "person" [var "X"]) knowledgebase
-        |> checkSolve [[str "Mary"]; [str "Polina"]; [str "Evgeniy"]; [str "Solniwko"]]
-        solve (GOAL "person" [str "Miwa"]) knowledgebase
+        |> checkSolve [[stringList "Mary"]; [stringList "Polina"]; [stringList "Evgeniy"]; [stringList "Solniwko"]]
+        solve (GOAL "person" [stringList "Miwa"]) knowledgebase
         |> checkSolve []
 
     [<Test; MemoryReport>]
     let testParentRule() =
-        solve (GOAL "parent" [str "Polina"; var "Descendant"]) knowledgebase
-        |> checkSolve [[str "Polina"; str "Evgeniy"]]
+        solve (GOAL "parent" [stringList "Polina"; var "Descendant"]) knowledgebase
+        |> checkSolve [[stringList "Polina"; stringList "Evgeniy"]]
         solve (GOAL "parent" [var "Parent"; var "Descendant"]) knowledgebase
-        |> checkSolve [[str "Mary"; str "Polina"]; [str "Solniwko"; str "Polina"]; [str "Polina"; str "Evgeniy"]]
+        |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Solniwko"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]]
         
     [<Test; MemoryReport>]
     let testParentBidirectRule_person_first() =
@@ -348,7 +318,7 @@ module RuleTests =
         let knowledgebase = knowledgebase@[biparent_pf]
         
         solve (GOAL "biparent_person_first" [var "Parent"; var "Descendant"]) knowledgebase
-        |> checkSolve [[str "Mary"; str "Polina"]; [str "Polina"; str "Evgeniy"]; [str "Solniwko"; str "Polina"]]
+        |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]; [stringList "Solniwko"; stringList "Polina"]]
         
     [<Test; MemoryReport>]
     let testParentBidirectRule_person_last() =
@@ -356,22 +326,22 @@ module RuleTests =
         let knowledgebase = knowledgebase@[biparent_pl]
         
         solve (GOAL "biparent_person_last" [var "Parent"; var "Descendant"]) knowledgebase
-        |> checkSolve [[str "Mary"; str "Polina"]; [str "Solniwko"; str "Polina"]; [str "Polina"; str "Evgeniy"]]
+        |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Solniwko"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]]
         
     [<Test; MemoryReport>]
     let testNotParentRule() =
         solve (GOAL "notParent" [var "NotParent"]) knowledgebase
-        |> checkSolve [[str "Evgeniy"]]
+        |> checkSolve [[stringList "Evgeniy"]]
 
-        solve (GOAL "notParent" [str "Mary"]) knowledgebase
+        solve (GOAL "notParent" [stringList "Mary"]) knowledgebase
         |> checkSolve []
 
     [<Test; MemoryReport>]
     let testGrandparentRule() =
         solve (GOAL "grandparent" [var "GrandParent"; var "Descendant"]) knowledgebase
-        |> checkSolve [[str "Mary"; str "Evgeniy"]; [str "Solniwko"; str "Evgeniy"]]
-        solve (GOAL "grandparent" [str "Mary"; str "Evgeniy"]) knowledgebase
-        |> checkSolve [[str "Mary"; str "Evgeniy"]]
+        |> checkSolve [[stringList "Mary"; stringList "Evgeniy"]; [stringList "Solniwko"; stringList "Evgeniy"]]
+        solve (GOAL "grandparent" [stringList "Mary"; stringList "Evgeniy"]) knowledgebase
+        |> checkSolve [[stringList "Mary"; stringList "Evgeniy"]]
 
     [<Test; MemoryReport>]
     let bigTest() =
@@ -403,60 +373,55 @@ module ListTests =
     let memberRule = RULE (SIGNATURE "member" [var "E"; var "L"]) (OrExpression(CallExpression(GOAL "head" [var "E"; var "L"]), AndExpression(CallExpression(GOAL "tail" [var "L"; var "T"]), CallExpression(GOAL "member" [var "E"; var "T"]))))
     
     let knowledgebase = [headRule; tailRule; memberRule]
-    
-    [<Test; MemoryReport>]
-    let listDefinition() =
-        Assert.AreEqual(str "", ListTerm(NilTerm))
-        Assert.AreEqual(str "12", ListTerm(TypedListTerm(charAny '1', TypedListTerm(charAny '2', NilTerm))))
 
     [<Test; MemoryReport>]
     let ``test empty list head``() =
-        solve (GOAL "head" [var "E"; str ""]) knowledgebase
+        solve (GOAL "head" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
     [<Test; MemoryReport>]
     let ``test any elements list head``() =
-        solve (GOAL "head" [var "E"; str "1"]) knowledgebase
-        |> checkSolve [[var "E"; str "1"]]
-        solve (GOAL "head" [var "E"; str "12"]) knowledgebase
-        |> checkSolve [[var "E"; str "1"]]
+        solve (GOAL "head" [var "E"; stringList "1"]) knowledgebase
+        |> checkSolve [[var "E"; stringList "1"]]
+        solve (GOAL "head" [var "E"; stringList "12"]) knowledgebase
+        |> checkSolve [[var "E"; stringList "1"]]
 
     [<Test; MemoryReport>]
     let ``test empty list tail``() =
-        solve (GOAL "tail" [var "E"; str ""]) knowledgebase
+        solve (GOAL "tail" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
     [<Test; MemoryReport>]
     let ``test one element list tail``() =
-        solve (GOAL "tail" [var "E"; str "1"]) knowledgebase
-        |> checkSolve [[var "E"; str ""]]
+        solve (GOAL "tail" [var "E"; stringList "1"]) knowledgebase
+        |> checkSolve [[var "E"; stringList ""]]
         
     [<Test; MemoryReport>]
     let ``test any elements list tail``() =
-        solve (GOAL "tail" [var "E"; str "12"]) knowledgebase
-        |> checkSolve [[var "E"; str "2"]]
-        solve (GOAL "tail" [var "E"; str "123"]) knowledgebase
-        |> checkSolve [[var "E"; str "23"]]
+        solve (GOAL "tail" [var "E"; stringList "12"]) knowledgebase
+        |> checkSolve [[var "E"; stringList "2"]]
+        solve (GOAL "tail" [var "E"; stringList "123"]) knowledgebase
+        |> checkSolve [[var "E"; stringList "23"]]
 
     [<Test; MemoryReport>]
     let ``test variable elements list tail``() =
         solve (GOAL "tail" [var "E"; ListTerm(TypedListTerm(num 1., VarListTerm(Variable("F"))))]) knowledgebase
-        |> checkSolve [[var "E"; str "E"]]
+        |> checkSolve [[var "E"; stringList "E"]]
 
     //[<Test; MemoryReport>]
     let ``test empty list member``() =
-        solve (GOAL "member" [var "E"; str ""]) knowledgebase
+        solve (GOAL "member" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
     //[<Test; MemoryReport>]
     let ``test defined list member``() =
-        solve (GOAL "member" [var "E"; str "123"]) knowledgebase
-        |> checkSolve [[var "E"; str "1"]; [var "E"; str "2"]; [var "E"; str "3"]]
+        solve (GOAL "member" [var "E"; stringList "123"]) knowledgebase
+        |> checkSolve [[var "E"; stringList "1"]; [var "E"; stringList "2"]; [var "E"; stringList "3"]]
     
     //[<Test; MemoryReport>]
     let ``test partly defined list member``() =
         solve (GOAL "member" [var "E"; ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("F")))))]) knowledgebase
-        |> checkSolve [[var "E"; str "1"]; [var "E"; str "2"]; [var "E"; str "E"]]
+        |> checkSolve [[var "E"; stringList "1"]; [var "E"; stringList "2"]; [var "E"; stringList "E"]]
 
     [<Test; MemoryReport>]
     let ``test var list params unification with var list arg``() = 
