@@ -143,6 +143,7 @@
     <Compile Include="PrologParser.fs" />
     <Compile Include="PrologLexer.fs" />
     <Compile Include="Main.fs" />
+    <Compile Include="Parse.fs" />
     <Compile Include="Interactive.fs" />
     <None Include="App.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

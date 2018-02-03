@@ -3,7 +3,6 @@
 open System.Diagnostics
 
 open TermTypes
-open TermTypes.Transformers
 
 module Rule =
     type Argument = Argument of Term
@@ -12,9 +11,10 @@ module Rule =
 
     type Signature = Signature of string * Parameter list
         with
-        override self.ToString() =
+        member self.AsString =
             let (Signature(name, parameters)) = self
             sprintf "%s/%d" name parameters.Length
+        override self.ToString() = self.AsString
     type Goal = Goal of Structure
 
     type Calc =
@@ -51,20 +51,17 @@ module Rule =
             | Parameter(VariableTerm v) -> ResultExpression (VariableTerm v)
             | Parameter(TypedTerm v) -> ResultExpression (TypedTerm v)
             | Parameter(StructureTerm(v)) -> ResultExpression(StructureTerm(v))
+            | Parameter(ListTerm(v)) -> ResultExpression(ListTerm(v))
 
-        [<DebuggerStepThrough>]
-        let signature (name: string) (prms: Term list) =
-            Signature (name, List.map Parameter prms)
-    
         [<DebuggerStepThrough>]    
         let fromArgs = List.map (fun (Argument(a)) -> a)
         [<DebuggerStepThrough>]
-        let toArgs = List.map (fun a -> Argument(a))
+        let toArgs = List.map Argument
 
         [<DebuggerStepThrough>]
         let fromParams = List.map (fun (Parameter(a)) -> a)
         [<DebuggerStepThrough>]
-        let toParams = List.map (fun a -> Parameter(a))
+        let toParams = List.map Parameter
 
         [<DebuggerStepThrough>]
         let formatResult (result: Result) =
