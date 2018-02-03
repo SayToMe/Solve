@@ -38,8 +38,6 @@ module VariableUnify =
             | (ListTerm(l1), ListTerm(l2)) ->
                 match (l1, l2) with
                 | NilTerm, NilTerm -> Some t1
-                //| NilTerm, _ -> None
-                //| _, NilTerm -> None
                 | _, VarListTerm _ -> Some (t1)
                 | VarListTerm _, _ -> Some (t2)
                 | TypedListTerm(l1, r1), TypedListTerm(l2, r2) -> 

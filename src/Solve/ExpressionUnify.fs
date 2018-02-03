@@ -144,12 +144,6 @@ module ExpressionUnify =
         | _ -> failwith "???"
 
     let rec unifyResultToParameters arguments initialExpression expression =
-        // args = [~E~ ; 1 | 2 | [] ]
-        // v1 = [~E~ | ~R~]
-        // v2 = 1 | 2 | []
-        // should unify to ~E~ = 1
-        //let unifyWithArgs args v1 v2 = args |> List.map (fun (a) -> if a = v1 then v2 else a)
-
         let unifyWithArgs (args: Term list) (v1: Term) (v2: Term) =
             args
             |> List.map (fun a -> 
