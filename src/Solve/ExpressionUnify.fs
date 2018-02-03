@@ -33,8 +33,10 @@ module ExpressionUnify =
             | (VariableTerm(v1), VariableTerm(v2)) -> functor'(proc v1, proc v2)
             | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, t2)
             | (VariableTerm(v1), StructureTerm(v2)) -> functor'(proc v1, StructureTerm(changeVariablesForStruct proc v2))
+            | (VariableTerm(v1), ListTerm(v2)) -> functor'(proc v1, ListTerm(changeVariablesForList proc v2))
             | (TypedTerm(_), VariableTerm(v2)) -> functor'(t1, proc v2)
             | (StructureTerm(v1), VariableTerm(v2)) -> functor'(StructureTerm(changeVariablesForStruct proc v1), proc v2)
+            | (ListTerm(v1), VariableTerm(v2)) -> functor'(ListTerm(changeVariablesForList proc v1), proc v2)
             | (ListTerm(l1), ListTerm(l2)) -> functor'(ListTerm(changeVariablesForList proc l1), ListTerm(changeVariablesForList proc l2))
             | _ -> functor'(t1, t2)
 
@@ -64,7 +66,7 @@ module ExpressionUnify =
             match v with
             | VariableTerm(vv) -> CalcExpr(changeVariable vv, unifyCalc changeVariable c)
             | TypedTerm(v) -> CalcExpr(TypedTerm(v), unifyCalc changeVariable c)
-            | ListTerm _
+            | ListTerm _ -> failwith "Calc of list is not implemented yet"
             | StructureTerm _ -> failwith "Calc of custom struct is not implemented yet"
         | EqExpr (e1, e2) -> postUnifyBinaryExpression changeVariable EqExpr e1 e2
         | GrExpr (e1, e2) -> postUnifyBinaryExpression changeVariable GrExpr e1 e2
@@ -117,7 +119,7 @@ module ExpressionUnify =
                 let retIfEquals variable result v = if v = variable then result else VariableTerm(v)
 
                 match (p, a) with
-                //| VariableTerm(v1), VariableTerm(v2) -> fun v -> retIfEquals v a v if v = v2 then VariableTerm v1 else VariableTerm v
+                | VariableTerm(v1), VariableTerm(v2) -> fun v -> if v = v2 then VariableTerm v1 else VariableTerm v
                 | VariableTerm(v1), _ -> retIfEquals v1 a
                 | _, VariableTerm(v2) -> retIfEquals v2 p
                 | _ -> fun x -> VariableTerm x
@@ -133,8 +135,29 @@ module ExpressionUnify =
         unifyExpressionByParams parameters arguments body
         |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
+    let rec unifyListTerms (t1: TypedListTerm) (t2: TypedListTerm): Term -> Term =
+        match (t1, t2) with
+        | NilTerm, NilTerm -> fun v -> v
+        | VarListTerm(v1), s -> fun v -> if v = VariableTerm(v1) then ListTerm(s) else v
+        | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
+            fun v -> if v = t1 then t2 else unifyListTerms r1 r2 v
+        | _ -> failwith "???"
+
     let rec unifyResultToParameters arguments initialExpression expression =
-        let unifyWithArgs args v1 v2 = args |> List.map (fun (a) -> if a = v1 then v2 else a)
+        // args = [~E~ ; 1 | 2 | [] ]
+        // v1 = [~E~ | ~R~]
+        // v2 = 1 | 2 | []
+        // should unify to ~E~ = 1
+        //let unifyWithArgs args v1 v2 = args |> List.map (fun (a) -> if a = v1 then v2 else a)
+
+        let unifyWithArgs (args: Term list) (v1: Term) (v2: Term) =
+            args
+            |> List.map (fun a -> 
+                match v1, v2 with
+                | _ when a = v1 -> v2
+                | ListTerm(l1), ListTerm(l2) -> unifyListTerms l1 l2 a
+                | _ -> a
+            )
 
         match (initialExpression, expression) with
         | (True, True) -> arguments

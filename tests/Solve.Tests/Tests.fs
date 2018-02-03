@@ -123,7 +123,7 @@ module VariableUnifyTests =
         VariableUnify.unifyParametersWithArguments (toParams [var "V"; var "V"; var "V"]) (toArgs [num 10.; num 5.; var "V"])
         |> check (Some([num 10.; num 5.; var "V"]))
 
-        VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [var "N2"]) |> check (Some([var "N2"]))
+        VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [var "N2"]) |> check (Some([var "N"]))
         VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [var "N"]) |> check (Some([num 1.]))
         VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [num 1.]) |> check (Some([num 1.]))
         VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [num 1.]) |> check (Some([num 1.]))
@@ -202,6 +202,8 @@ module SimpleTests =
         solve (GOAL "innervar" [var "N"]) [RULE (SIGNATURE "innervar" [var "N"]) (AndExpression(EqExpr(var "Temp", num 1.), EqExpr(var "N", var "Temp")))]
         |> checkSolve [[num 1.]]
 
+    [<Test; MemoryReport>]
+    let testExecuteStructure() =
         solve (GOAL "structure execute" [num 2.; var "Res"]) [RULE (SIGNATURE "structure execute" [var "N"; var "R"]) (CalcExpr(var "R", Value(StructureTerm(Structure("+", [var "N"; num 1.])))))]
         |> checkSolve [[num 2.; num 3.]]
 
@@ -216,17 +218,17 @@ module SimpleTests =
         |> checkSolve [[num 1.; num 1.]]
 
     [<Test; MemoryReport>]
-    let checkLazySolve =
+    let checkLazySolve() =
         solve (GOAL "lazy infinite" [num 1.; var "R"]) [RULE (SIGNATURE "lazy infinite" [var "C"; var "R"]) (OrExpression(EqExpr(var "C", var "R"), AndExpression(CalcExpr(var "NextC", Plus(Value(var "C"), Value(num 1.))), CallExpression(Goal(Structure("lazy infinite", [var "NextC"; var "R"]))))))]
-        |> Seq.take 10
-        |> checkSolve ([1..10] |> List.map (fun x -> [num 1.; num (float x)]))
+        |> Seq.take 3
+        |> checkSolve ([1..3] |> List.map (fun x -> [num 1.; num (float x)]))
 
     [<Test; MemoryReport>]
     let realTest() =
         solve (GOAL "eq1_both" [var "N"; var "Res"]) [RULE (SIGNATURE "eq1_both" [var "N1"; var "N2"]) (AndExpression((EqExpr(var "N1", num 1.), (EqExpr(var "N2", num 1.)))))]
         |> checkSolve [[num 1.; num 1.]]
         solve(GOAL "eq" [var "N"; var "N2"]) [RULE (SIGNATURE "eq" [var "N1"; var "N2"]) (EqExpr(var "N1", var "N2"))]
-        |> checkSolve [[var "N2"; var "N2"]]
+        |> checkSolve [[var "N"; var "N"]]
 
         let oneOrTwoRule = RULE(SIGNATURE "f1" [var "N"; var "Res"]) (OrExpression(AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.)), AndExpression(GrExpr(var "N", num 1.), EqExpr(var "Res", num 2.))))
         solve (GOAL "f1" [num 1.; var "Res"]) [oneOrTwoRule]
@@ -388,33 +390,36 @@ module ListTests =
         |> checkSolve []
 
     [<Test; MemoryReport>]
-    let ``test any elements list head``() =
+    let ``test one element list head``() =
         solve (GOAL "head" [var "E"; stringList "1"]) knowledgebase
-        |> checkSolve [[var "E"; stringList "1"]]
+        |> checkSolve [[char '1'; stringList "1"]]
+
+    [<Test; MemoryReport>]
+    let ``test two elements list head``() =
         solve (GOAL "head" [var "E"; stringList "12"]) knowledgebase
-        |> checkSolve [[var "E"; stringList "1"]]
+        |> checkSolve [[char '1'; stringList "12"]]
 
     [<Test; MemoryReport>]
     let ``test empty list tail``() =
-        solve (GOAL "tail" [var "E"; stringList ""]) knowledgebase
+        solve (GOAL "tail" [stringList ""; var "T"]) knowledgebase
         |> checkSolve []
 
     [<Test; MemoryReport>]
     let ``test one element list tail``() =
-        solve (GOAL "tail" [var "E"; stringList "1"]) knowledgebase
-        |> checkSolve [[var "E"; stringList ""]]
+        solve (GOAL "tail" [stringList "1"; var "T"]) knowledgebase
+        |> checkSolve [[stringList "1"; stringList ""]]
         
     [<Test; MemoryReport>]
     let ``test any elements list tail``() =
-        solve (GOAL "tail" [var "E"; stringList "12"]) knowledgebase
-        |> checkSolve [[var "E"; stringList "2"]]
-        solve (GOAL "tail" [var "E"; stringList "123"]) knowledgebase
-        |> checkSolve [[var "E"; stringList "23"]]
+        solve (GOAL "tail" [stringList "12"; var "T"]) knowledgebase
+        |> checkSolve [[stringList "12"; stringList "2"]]
+        solve (GOAL "tail" [stringList "123"; var "T"]) knowledgebase
+        |> checkSolve [[stringList "123"; stringList "23"]]
 
     [<Test; MemoryReport>]
     let ``test variable elements list tail``() =
-        solve (GOAL "tail" [var "E"; ListTerm(TypedListTerm(num 1., VarListTerm(Variable("F"))))]) knowledgebase
-        |> checkSolve [[var "E"; stringList "E"]]
+        solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
+        |> checkSolve [[ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); ListTerm(VarListTerm(Variable("F")))]]
 
     //[<Test; MemoryReport>]
     let ``test empty list member``() =
@@ -437,7 +442,7 @@ module ListTests =
         |> check (Some([ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]))
 
     [<Test; MemoryReport>]
-    let ``test var list rule unification with var list``() = 
+    let ``test var list rule unification with var list doesn't change inner var``() = 
         unifyRule (RULE (SIGNATURE "eqvarlist" [ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]) True) [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm)))]
         |> check (Some(Rule(Signature("eqvarlist", [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]), True)))
 

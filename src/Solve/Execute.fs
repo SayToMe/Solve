@@ -49,6 +49,10 @@ module Execute =
         | _ as c -> failwithf "incorrect calc expression called. %A" c
 
     // TODO: maybe we should unify each time we execute expression?
+    // IDEA IS:
+    // rewrite as search for goal(Expression)
+    // no execute custom, that should be accessible by knowledgebase right here probably
+    // no change variable fn, goal is unified right there
     let rec executeExpression (expr: Expression) (executeCustom: Goal -> #seq<Term list>) (changeVariableFn: Variable -> Term) =
         let keepOnlyFirstCut exprs =
             let rec exprHasCut e =
@@ -76,7 +80,7 @@ module Execute =
             | VariableTerm(v) -> changeVariable v
             | a -> a
         // TODO check structure execute is correct
-        let executeBinaryExpression functor' condition e1 e2 =
+        let rec executeBinaryExpression (functor': Term * Term -> Expression) (condition: TypedTerm -> TypedTerm -> bool) (e1: Term) (e2: Term): Expression seq =
             // Hack for equality check
             let conditionIsEquality = condition (TypedNumberTerm(NumberTerm(1.))) (TypedNumberTerm(NumberTerm(1.)))
 
@@ -103,18 +107,28 @@ module Execute =
             | (ListTerm l1, ListTerm l2) ->
                 let rec procList2 l1 l2 =
                     match l1, l2 with
-                    | NilTerm, NilTerm -> Some (NilTerm, NilTerm)
-                    | VarListTerm _, _ -> Some (l2, l2)
-                    | _, VarListTerm _ -> Some (l1, l1)
+                    | NilTerm, NilTerm -> Seq.singleton (NilTerm, NilTerm)
+                    //| NilTerm, _ -> Seq.empty
+                    //| _, NilTerm -> Seq.empty
+                    | VarListTerm _, _ -> Seq.singleton (l2, l2)
+                    | _, VarListTerm _ -> Seq.singleton (l1, l1)
                     | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
                         let t1 = changeIfVariable changeVariableFn t1
                         let t2 = changeIfVariable changeVariableFn t2
-                        procList2 r1 r2
-                        |> Option.bind(fun (p1, p2) -> Some(TypedListTerm(t1, p1), TypedListTerm(t2, p2)))
-                    | _ -> None
-                match procList2 l1 l2 with
-                | Some (p1, p2) -> Seq.singleton (functor'(ListTerm(p1), ListTerm(p2)))
-                | None -> Seq.empty
+
+                        let unift = executeBinaryExpression (fun (t1, t2) -> EqExpr(t1, t2)) condition t1 t2
+
+                        unift
+                        |> Seq.map (fun (EqExpr(t1, t2)) -> t1)
+                        |> Seq.collect (fun t -> 
+                            procList2 r1 r2
+                            |> Seq.map (fun (p1, p2) -> 
+                                (TypedListTerm(t, p1), TypedListTerm(t, p2))
+                            )
+                        )
+                    | _ -> Seq.empty
+                procList2 l1 l2
+                |> Seq.map (fun (lp1, lp2) -> functor'(ListTerm(lp1), ListTerm(lp2)))
             | _ -> failwith "unexpected execute binary expression arguments"
         match expr with
         | True -> Seq.singleton True
@@ -186,7 +200,39 @@ module Execute =
                     ||> List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v))
 
                 let results = executeExpression expr executeCustom changeVar
-                let postResults = Seq.map (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results
+                //let resl = Seq.toList results
+                // should this be args?
+                let postResults = 
+                    Seq.map (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results
+                    |> Seq.map (fun vs ->
+                        let rec procl l1 l2 =
+                            match l1, l2 with
+                            | NilTerm, NilTerm -> NilTerm
+                            | VarListTerm(v1), VarListTerm(v2) -> VarListTerm(v1)
+                            | VarListTerm(v1), v2 -> v2
+                            | v1, VarListTerm(v2) -> v1
+                            | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
+                                match t1, t2 with
+                                | VariableTerm(_), VariableTerm(_) -> TypedListTerm(t2, procl r1 r2)
+                                | _ -> TypedListTerm(t2, procl r1 r2)
+                            | _ -> failwith "?????"
+
+                        let res =
+                            (vs, goalArguments)
+                            ||> List.map2 (fun v arg ->
+                                match v, arg with
+                                | VariableTerm(_), VariableTerm(_) -> (v, arg)
+                                | ListTerm(l1), ListTerm(l2) -> (v, ListTerm(procl l1 l2))
+                                | _ -> (v, v)
+                            )
+                        
+                        (vs)
+                        |> List.map (fun (v) -> 
+                            let (_, vr) = List.find (fun (vv, _) -> vv = v) res
+                            vr
+                        )
+                    )
+                //let postl = Seq.toList postResults
                 postResults
             else
                 Seq.empty

@@ -25,9 +25,8 @@ module VariableUnify =
     let rec unifyParametersWithArguments (parameters: Parameter list) (arguments: Argument list) =
         let rec unifyRightToConcreteLeft (t1: Term) (t2: Term) =
             match (t1, t2) with
-            | (VariableTerm(_), VariableTerm(_)) -> Some t2
-            | (VariableTerm(_), _) -> Some t2
             | (_, VariableTerm(_)) -> Some t1
+            | (VariableTerm(_), _) -> Some t2
             | (TypedTerm(vt1), TypedTerm(vt2)) when vt1 = vt2 -> Some t2
             | (StructureTerm(Structure(f1, p1)), StructureTerm(Structure(f2, p2))) when f1 = f2 && p1.Length = p2.Length ->
                 let newArgs = List.map2 (fun v1 v2 -> unifyRightToConcreteLeft v1 v2) p1 p2
@@ -38,10 +37,11 @@ module VariableUnify =
                     Some(StructureTerm(Structure(f1, newArgs)))
             | (ListTerm(l1), ListTerm(l2)) ->
                 match (l1, l2) with
-                | VarListTerm _, VarListTerm _ -> Some (t2)
-                | VarListTerm _, _ -> Some (t2)
-                | _, VarListTerm _ -> Some (t1)
                 | NilTerm, NilTerm -> Some t1
+                //| NilTerm, _ -> None
+                //| _, NilTerm -> None
+                | _, VarListTerm _ -> Some (t1)
+                | VarListTerm _, _ -> Some (t2)
                 | TypedListTerm(l1, r1), TypedListTerm(l2, r2) -> 
                     unifyRightToConcreteLeft l1 l2 |> Option.bind (fun l -> unifyRightToConcreteLeft (ListTerm r1) (ListTerm r2) |> Option.bind (fun (ListTerm(r)) -> Some <| ListTerm(TypedListTerm(l, r))))
                 | _ -> None
