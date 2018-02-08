@@ -9,7 +9,7 @@ open Solve.Rule.Transformers
 
 type ParseResult =
     | RuleParseResult of Rule
-    | CallParseResult of Goal
+    | CallParseResult of Expression
 
 let getVarFromTerm (VariableTerm(v)) = v
 
@@ -51,7 +51,7 @@ start: prog { $1 }
 
 prog:
 	| EOF { None }
-	| QUESTION_MARK MINUS goal DOT { Some <| CallParseResult $3 }
+	| QUESTION_MARK MINUS body DOT { Some <| CallParseResult $3 }
 	| fact { Some <| RuleParseResult $1 }
 	| rule { Some <| RuleParseResult $1 }
 
@@ -65,14 +65,22 @@ signature:
 	| ATOM LEFT_BRACKET parameterList RIGHT_BRACKET { Signature($1, $3) }
 
 goal:
-	| ATOM LEFT_BRACKET termList RIGHT_BRACKET { Solve.Rule.Goal(Solve.TermTypes.Structure($1, $3)) }
-
+	| ATOM LEFT_BRACKET argumentList RIGHT_BRACKET  { Solve.Rule.GoalSignature($1, $3) }
+	
 parameter:
     | term { Parameter($1) }
 
 parameterList:
 	| parameter { [$1] }
     | parameterList COMMA parameter { $1@[$3] }
+	| { [] }
+
+argument:
+    | term { Argument($1) }
+
+argumentList:
+	| argument { [$1] }
+    | argumentList COMMA argument { $1@[$3] }
 	| { [] }
 
 termList:

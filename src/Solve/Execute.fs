@@ -53,7 +53,7 @@ module Execute =
     // rewrite as search for goal(Expression)
     // no execute custom, that should be accessible by knowledgebase right here probably
     // no change variable fn, goal is unified right there
-    let rec executeExpression (expr: Expression) (executeCustom: Goal -> #seq<Term list>) (changeVariableFn: Variable -> Term) =
+    let rec executeExpression (expr: Expression) (executeCustom: GoalSignature -> #seq<Term list>) (changeVariableFn: Variable -> Term) =
         let keepOnlyFirstCut exprs =
             let rec exprHasCut e =
                 match e with
@@ -172,10 +172,9 @@ module Execute =
                     )
                 )
         | ResultExpression e -> Seq.singleton (ResultExpression e)
-        | CallExpression goal ->
-            let (Goal(Structure(goalSign, _))) = goal
-            executeCustom goal
-            |> Seq.map (fun resExpr -> CallExpression(Goal(Structure(goalSign, resExpr))))
+        | CallExpression (GoalSignature(name, args)) ->
+            executeCustom (GoalSignature(name, args))
+            |> Seq.map (fun resTerms -> CallExpression(GoalSignature(name, toArgs resTerms)))
         | CalcExpr (v, c) ->
             let v = changeIfVariable changeVariableFn v
             let c = unifyCalc changeVariableFn c
@@ -187,56 +186,130 @@ module Execute =
         | GrExpr (e1, e2) -> executeBinaryExpression GrExpr (>) e1 e2
         | LeExpr (e1, e2) -> executeBinaryExpression LeExpr (<) e1 e2
         | _ -> Seq.empty
+    
+    let getExpressionVariables expr =
+        let getVariablesFromTerm term =
+            match term with
+            | VariableTerm(v) -> [v]
+            | StructureTerm(_)
+            | ListTerm(_) -> failwith "not implemented yet"
+            | _ -> []
 
-    let private postExecuteUnify fromArgs resExpr resArgs =
-        Seq.map fromArgs resExpr
-            |> Seq.map (fun vs ->
-                let rec procl l1 l2 =
-                    match l1, l2 with
-                    | NilTerm, NilTerm -> NilTerm
-                    | VarListTerm(v1), VarListTerm(_) -> VarListTerm(v1)
-                    | VarListTerm(_), v2 -> v2
-                    | v1, VarListTerm(_) -> v1
-                    | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
-                        match t1, t2 with
-                        | VariableTerm(_), VariableTerm(_) -> TypedListTerm(t2, procl r1 r2)
-                        | _ -> TypedListTerm(t2, procl r1 r2)
-                    | _ -> failwith "?????"
+        let rec getExprVariables expr =
+            match expr with
+            | True -> []
+            | False -> []
+            | Cut -> []
+            | NotExpression e ->
+                // ?- getExprVariables e
+                []
+            | OrExpression (e1, e2) ->
+                getExprVariables e1 @ getExprVariables e2
+            | AndExpression (e1, e2) ->
+                getExprVariables e1 @ getExprVariables e2
+            | ResultExpression t -> getVariablesFromTerm t
+            | CallExpression (GoalSignature(name, args)) ->
+                args |> fromArgs |> List.collect getVariablesFromTerm
+            | CalcExpr (v, c) ->
+                // ?
+                getVariablesFromTerm v
+            | EqExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
+            | GrExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
+            | LeExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
+            | _ -> []
+        getExprVariables expr
+        |> List.distinct
+        
+    // Assumption: expressions are the same
+    let getExpressionVariableValues expr resexpr =
+        let getVariableValueFromTerm (term: Term) (resterm: Term) =
+            match term with
+            | VariableTerm(v) -> [(v, resterm)]
+            | StructureTerm(_)
+            | ListTerm(_) -> failwith "not implemented yet"
+            | _ -> []
 
-                let res =
-                    (vs, resArgs)
-                    ||> List.map2 (fun v arg ->
-                        match v, arg with
-                        | VariableTerm(_), VariableTerm(_) -> (v, arg)
-                        | ListTerm(l1), ListTerm(l2) -> (v, ListTerm(procl l1 l2))
-                        | _ -> (v, v)
-                    )
-                        
-                (vs)
-                |> List.map (fun (v) -> 
-                    let (_, vr) = List.find (fun (vv, _) -> vv = v) res
-                    vr
+        let rec getExprVariables expr resexpr =
+            match expr, resexpr with
+            | True, True -> []
+            | False, False -> []
+            | Cut, Cut -> []
+            | NotExpression _, NotExecuted _ -> []
+            | OrExpression (e1, e2), OrExpression (e1', e2') ->
+                getExprVariables e1 e1' @ getExprVariables e2 e2'
+            | AndExpression (e1, e2), AndExpression (e1', e2')  ->
+                getExprVariables e1 e1' @ getExprVariables e2 e2'
+            | ResultExpression t, ResultExpression t' -> getVariableValueFromTerm t t'
+            | CallExpression (GoalSignature(name, args)), CallExpression (GoalSignature(name', args')) when name = name' && args.Length = args'.Length ->
+                (fromArgs args, fromArgs args') ||> List.map2 (fun a a' -> getVariableValueFromTerm a a') |> List.collect (fun x -> x)
+            | CalcExpr (v, _), CalcExpr (v', _) ->
+                getVariableValueFromTerm v v'
+            | EqExpr (e1, e2), EqExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
+            | GrExpr (e1, e2), GrExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
+            | LeExpr (e1, e2), LeExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
+            | _ -> failwith "Something went wrong"
+        getExprVariables expr resexpr
+        |> List.distinct
+
+    let postExecuteUnify fromArgs resArgs =
+        fromArgs
+        |> Seq.map (fun vs ->
+            let rec procl l1 l2 =
+                match l1, l2 with
+                | NilTerm, NilTerm -> NilTerm
+                | VarListTerm(v1), VarListTerm(_) -> VarListTerm(v1)
+                | VarListTerm(_), v2 -> v2
+                | v1, VarListTerm(_) -> v1
+                | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
+                    match t1, t2 with
+                    | VariableTerm(_), VariableTerm(_) -> TypedListTerm(t2, procl r1 r2)
+                    | _ -> TypedListTerm(t2, procl r1 r2)
+                | _ -> failwith "?????"
+
+            let res =
+                (vs, resArgs)
+                ||> List.map2 (fun v arg ->
+                    match v, arg with
+                    | VariableTerm(_), VariableTerm(_) -> (v, arg)
+                    | ListTerm(l1), ListTerm(l2) -> (v, ListTerm(procl l1 l2))
+                    | _ -> (v, v)
                 )
+                        
+            (vs)
+            |> List.map (fun (v) -> 
+                let (_, vr) = List.find (fun (vv, _) -> vv = v) res
+                vr
             )
+        )
+
+    //let f() =
+    //    postExecuteUnify (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results goalArguments
 
     // Idea is:
     // Expression is unified with arguments by parameters
     // Expression executes and all variables are resolved
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
-    let execute (Goal(Structure(name, goalArguments))) (rule: Rule) (executeCustom: Goal -> #seq<Term list>) =
-        let arguments = toArgs goalArguments
+    let executeCustomExpression (Goal(expr)) (executeCustom: GoalSignature -> #seq<Term list>): ((Variable * Term) list) seq =
+        executeExpression expr executeCustom (fun v -> VariableTerm(v))
+        |> Seq.map (fun resExpr -> getExpressionVariableValues expr resExpr)
 
-        match unifyRule rule arguments with
-        | Some (Rule(Signature(ruleName, unifiedRuleParameters), expr)) -> 
-            if name = ruleName then
-                let changeVar = 
-                    (unifiedRuleParameters, arguments)
-                    ||> List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v))
+        //let arguments = toArgs goalArguments
 
-                let results = executeExpression expr executeCustom changeVar
-                let postResults = postExecuteUnify (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results goalArguments
-                postResults
-            else
-                Seq.empty
-        | None -> Seq.empty
+        //match unifyRule rule arguments with
+        //| Some (Rule(Signature(ruleName, unifiedRuleParameters), expr)) -> 
+        //    if name = ruleName then
+        //        let changeVar = 
+        //            (unifiedRuleParameters, arguments)
+        //            ||> List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v))
+
+        //        let results = executeExpression expr executeCustom changeVar
+        //        let postResults = postExecuteUnify (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results goalArguments
+        //        postResults
+        //    else
+        //        Seq.empty
+        //| None -> Seq.empty
+
+    let exExpr (expr: Expression) (executeCustom: GoalSignature -> #seq<Term list>) (changeVariableFn: Variable -> Term): ((Variable * Term) list) seq =
+        executeExpression expr executeCustom changeVariableFn
+        |> Seq.map (fun resExpr -> getExpressionVariableValues expr resExpr)

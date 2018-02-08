@@ -53,15 +53,16 @@ module ExpressionUnify =
             | TypedTerm _ -> expression
             | StructureTerm(v) -> ResultExpression(StructureTerm(changeVariablesForStruct changeVariable v))
             | ListTerm v -> ResultExpression(ListTerm(changeVariablesForList changeVariable v))
-        | CallExpression(Goal(Structure(goalName, arguments))) ->
+        | CallExpression(GoalSignature(goalName, arguments)) ->
             let newGoalArgs =
                 arguments
+                |> fromArgs
                 |> List.map (function
                             | VariableTerm(v) -> Argument(changeVariable v)
                             | TypedTerm(v) -> Argument(TypedTerm(v))
                             | StructureTerm(v) -> Argument(StructureTerm(changeVariablesForStruct changeVariable v))
                             | ListTerm(v) -> Argument(ListTerm(changeVariablesForList changeVariable v)))
-            CallExpression (Goal(Structure(goalName, fromArgs newGoalArgs)))
+            CallExpression (GoalSignature(goalName, newGoalArgs))
         | CalcExpr (v, c) ->
             match v with
             | VariableTerm(vv) -> CalcExpr(changeVariable vv, unifyCalc changeVariable c)
@@ -104,8 +105,8 @@ module ExpressionUnify =
                 let changedFn2 = _getChangedVariableFn e2 e4 changedFn1
                 changedFn2
             | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (backwardsTermUnification e1 e2)
-            | (CallExpression(Goal(Structure(name1, goalArgs1))), CallExpression(Goal(Structure(name2, goalArgs2)))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
-                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> backwardsTermUnification a1 a2 fns) fn goalArgs1 goalArgs2) changedVariableFns
+            | (CallExpression(GoalSignature(name1, goalArgs1)), CallExpression(GoalSignature(name2, goalArgs2))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
+                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> backwardsTermUnification a1 a2 fns) fn (fromArgs goalArgs1) (fromArgs goalArgs2)) changedVariableFns
             | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (backwardsTermUnification v1 v2)
             | (EqExpr(v1, v2), EqExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
             | (GrExpr(v1, v2), GrExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
@@ -162,8 +163,8 @@ module ExpressionUnify =
         | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
         | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
         | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
-        | (CallExpression(Goal(Structure(name1, goalArgs1))), CallExpression(Goal(Structure(name2, goalArgs2)))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
-            List.fold2 (fun args (arg1) (arg2) -> unifyWithArgs args arg1 arg2) arguments goalArgs1 goalArgs2
+        | (CallExpression(GoalSignature(name1, goalArgs1)), CallExpression(GoalSignature(name2, goalArgs2))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
+            List.fold2 (fun args (arg1) (arg2) -> unifyWithArgs args arg1 arg2) arguments (fromArgs goalArgs1) (fromArgs goalArgs2)
         | (CalcExpr(v1, _), CalcExpr(v2, _)) -> unifyWithArgs arguments v1 v2
         | (EqExpr(v1, v2), EqExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
         | (GrExpr(v1, v2), GrExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
