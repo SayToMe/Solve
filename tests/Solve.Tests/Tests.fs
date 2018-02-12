@@ -178,27 +178,39 @@ module SimpleTests =
         |> checkExecuteExpression [AndExpression(CalcExpr(num 1., Value(num 1.)), EqExpr(num 1., num 1.))]
 
     open Solve
-
+    
     [<Test; MemoryReport>]
-    let testExecute() = 
+    let ``test execute var eq to concrete``() = 
         solve (GOAL "eq1" [var "N"]) [RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))]
         |> checkSolve [[Variable "N", num 1.]]
 
+    [<Test; MemoryReport>]
+    let ``test execute concrete to var eq concrete``() = 
         solve (GOAL "eq2" [num 1.]) [RULE (SIGNATURE "eq2" [var "N"]) (EqExpr(var "N", num 1.))]
-        |> checkSolve [[Variable "N", num 1.]]
+        |> checkSolve [[]]
 
+    [<Test; MemoryReport>]
+    let ``test execute concrete to different concrete``() = 
         solve (GOAL "eq3" [num 2.]) [RULE (SIGNATURE "eq3" [var "N"]) (EqExpr(var "N", num 1.))]
         |> checkSolve []
-            
+
+    [<Test; MemoryReport>]
+    let ``test execute and eq concrete to wrong concrete``() = 
         solve (GOAL "and" [var "N"]) [RULE (SIGNATURE "and" [var "N"]) (AndExpression(EqExpr(var "N", num 1.), EqExpr(var "N", num 2.)))]
         |> checkSolve []
-
+        
+    [<Test; MemoryReport>]
+    let ``test execute or eq var to concrete``() = 
         solve (GOAL "or" [var "N"]) [RULE (SIGNATURE "or" [var "N"]) (OrExpression(EqExpr(var "N", num 1.), EqExpr(var "N", num 2.)))]
         |> checkSolve [[Variable "N", num 1.]; [Variable "N", num 2.]]
 
+    [<Test; MemoryReport>]
+    let ``test execute fail fact``() = 
         solve (GOAL "fa" [var "N"]) [RULE (SIGNATURE "fa" [var "N"]) (False)]
         |> checkSolve []
 
+    [<Test; MemoryReport>]
+    let ``test execute inner variable eq``() = 
         solve (GOAL "innervar" [var "N"]) [RULE (SIGNATURE "innervar" [var "N"]) (AndExpression(EqExpr(var "Temp", num 1.), EqExpr(var "N", var "Temp")))]
         |> checkSolve [[Variable "N", num 1.]]
 
@@ -222,20 +234,27 @@ module SimpleTests =
         solve (GOAL "lazy infinite" [num 1.; var "R"]) [RULE (SIGNATURE "lazy infinite" [var "C"; var "R"]) (OrExpression(EqExpr(var "C", var "R"), AndExpression(CalcExpr(var "NextC", Plus(Value(var "C"), Value(num 1.))), GOAL "lazy infinite" [var "NextC"; var "R"])))]
         |> Seq.take 3
         |> checkSolve ([1..3] |> List.map (fun x -> [Variable "R", num (float x)]))
-
+        
     [<Test; MemoryReport>]
-    let realTest() =
+    let ``test eq variables to concrete``() =
         solve (GOAL "eq1_both" [var "N"; var "Res"]) [RULE (SIGNATURE "eq1_both" [var "N1"; var "N2"]) (AndExpression((EqExpr(var "N1", num 1.), (EqExpr(var "N2", num 1.)))))]
         |> checkSolve [[Variable "N", num 1.; Variable "Res", num 1.]]
+        
+    [<Test; MemoryReport>]
+    let ``test eq variables to variable``() =
         solve(GOAL "eq" [var "N"; var "N2"]) [RULE (SIGNATURE "eq" [var "N1"; var "N2"]) (EqExpr(var "N1", var "N2"))]
-        |> checkSolve [[Variable "N", var "N"; Variable "N2", var "N"]]
-
+        |> checkSolve [[Variable "N", var "N2"]]
+        
+    [<Test; MemoryReport>]
+    let ``test eq variables in or expression``() =
         let oneOrTwoRule = RULE(SIGNATURE "f1" [var "N"; var "Res"]) (OrExpression(AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.)), AndExpression(GrExpr(var "N", num 1.), EqExpr(var "Res", num 2.))))
         solve (GOAL "f1" [num 1.; var "Res"]) [oneOrTwoRule]
         |> checkSolve [[Variable "Res", num 1.]]
         solve (GOAL "f1" [num 3.; var "Res"]) [oneOrTwoRule]
         |> checkSolve [[Variable "Res", num 2.]]
 
+    [<Test; MemoryReport>]
+    let ``test nested variables eq``() =
         let getN = RULE(SIGNATURE "getn" [var "R"]) (EqExpr(var "R", num 1.))
         let inn = RULE(SIGNATURE "inn" [var "Res"]) (CallExpression(GoalSignature("getn", toArgs [var "Res"])))
         solve (GOAL "inn" [var "R"]) [getN; inn]
