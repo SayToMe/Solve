@@ -260,7 +260,7 @@ module Execute =
             | True, True -> []
             | False, False -> []
             | Cut, Cut -> []
-            | NotExpression _, NotExecuted _ -> []
+            | NotExpression _, NotExpression _ -> []
             | OrExpression (e1, e2), OrExpression (e1', e2') ->
                 getExprVariables e1 e1' @ getExprVariables e2 e2'
             | AndExpression (e1, e2), AndExpression (e1', e2')  ->
@@ -273,7 +273,7 @@ module Execute =
             | EqExpr (e1, e2), EqExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
             | GrExpr (e1, e2), GrExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
             | LeExpr (e1, e2), LeExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
-            | _ -> failwith "Something went wrong"
+            | _ -> failwithf "Failed to retrieve variables from %A to %A" expr resexpr
         getExprVariables expr resexpr
         |> List.distinct
 
