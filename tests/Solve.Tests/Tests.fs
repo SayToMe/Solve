@@ -428,7 +428,7 @@ module ListTests =
         // solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
         // checkSolve [[ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); ListTerm(VarListTerm(Variable("F")))]]
         solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
-        |> checkSolve [[Variable "F", var "F"]]
+        |> checkSolve [[Variable "E", ListTerm(VarListTerm(Variable "F"))]]
 
     //[<Test; MemoryReport>]
     let ``test empty list member``() =
@@ -458,7 +458,7 @@ module ListTests =
     [<Test; MemoryReport>]
     let ``test var list unification with var list``() =
         solve (GOAL "un" [ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm))]) [RULE(SIGNATURE "un" [ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]) True]
-        |> checkSolve [[Variable "X", ListTerm(NilTerm)]]
+        |> checkSolve [[]]
 
 open Solve.Parse
 open PrologParser

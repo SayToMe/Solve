@@ -276,6 +276,13 @@ module Execute =
             | _ -> failwithf "Failed to retrieve variables from %A to %A" expr resexpr
         getExprVariables expr resexpr
         |> List.distinct
+        |> List.filter (fun vt ->
+            match vt with
+            | (v1, VariableTerm(v2)) when v1 = v2 -> false
+            // TODO fix code above
+            | (v1, ListTerm(VarListTerm(v2))) when v1 = v2 -> false
+            | _ -> true
+        )
 
     let postExecuteUnify fromArgs resArgs =
         fromArgs
