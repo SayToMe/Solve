@@ -443,18 +443,15 @@ module ListTests =
 
     [<Test; MemoryReport>]
     let ``test variable elements list tail``() =
-        // was
-        // solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
-        // checkSolve [[ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); ListTerm(VarListTerm(Variable("F")))]]
         solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
         |> checkSolve [[Variable "E", ListTerm(VarListTerm(Variable "F"))]]
 
-    //[<Test; MemoryReport>]
+    [<Test; MemoryReport>]
     let ``test empty list member``() =
         solve (GOAL "member" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
-    //[<Test; MemoryReport>]
+    [<Test; MemoryReport>]
     let ``test defined list member``() =
         solve (GOAL "member" [var "E"; stringList "123"]) knowledgebase
         |> checkSolve [[Variable "E", char '1']; [Variable "E", char '2']; [Variable "E", char '3']]
