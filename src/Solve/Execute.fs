@@ -188,11 +188,18 @@ module Execute =
         | _ -> Seq.empty
     
     let getExpressionVariables expr =
-        let getVariablesFromTerm term =
+        let rec getVariablesFromTerm term =
             match term with
             | VariableTerm(v) -> [v]
-            | StructureTerm(_)
-            | ListTerm(_) -> failwith "not implemented yet"
+            | StructureTerm(Structure(_, terms)) -> terms |> List.collect getVariablesFromTerm
+            | ListTerm(l) -> 
+                match l with
+                | NilTerm -> []
+                | VarListTerm(v) -> [v]
+                | TypedListTerm(t, l) ->
+                    match t with
+                    | VariableTerm(v) -> [v] @ getVariablesFromTerm (ListTerm(l))
+                    | _ -> getVariablesFromTerm (ListTerm(l))
             | _ -> []
 
         let rec getExprVariables expr =
@@ -222,11 +229,30 @@ module Execute =
         
     // Assumption: expressions are the same
     let getExpressionVariableValues expr resexpr =
-        let getVariableValueFromTerm (term: Term) (resterm: Term) =
+        let rec getVariableValueFromTerm (term: Term) (resterm: Term) =
             match term with
             | VariableTerm(v) -> [(v, resterm)]
-            | StructureTerm(_)
-            | ListTerm(_) -> failwith "not implemented yet"
+            | StructureTerm(Structure(_, terms)) ->
+                match resterm with
+                | StructureTerm(Structure(_, resterms)) when terms.Length = resterms.Length ->
+                    (terms, resterms)
+                    ||> List.map2 (fun t1 t2 -> getVariableValueFromTerm t1 t2)
+                    |> List.collect (fun x -> x)
+                | StructureTerm(Structure(_, resterms)) when terms.Length <> resterms.Length ->
+                    failwith "Structure term could be unified only with structure term of same arity"
+                | _ -> failwith "Structure term can't be unified with anything by structure term"
+            | ListTerm(l) ->
+                match resterm with
+                | ListTerm(resl) ->
+                    match l, resl with
+                    | NilTerm, NilTerm -> []
+                    | VarListTerm(v), valt -> [(v, ListTerm(valt))]
+                    | TypedListTerm(t, tail), TypedListTerm(t1, tail1) ->
+                        match t with
+                        | VariableTerm(v) -> [(v, t1)] @ getVariableValueFromTerm (ListTerm tail) (ListTerm tail1)
+                        | _ -> getVariableValueFromTerm (ListTerm tail) (ListTerm tail1)
+                    | _ -> failwith "Incorrectly defined term/resterm"
+                | _ -> failwith "List term can't be unified with anything but list term"
             | _ -> []
 
         let rec getExprVariables expr resexpr =
