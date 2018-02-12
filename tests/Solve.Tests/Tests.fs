@@ -168,7 +168,7 @@ module SimpleTests =
     
     [<Test; MemoryReport>]
     let testExecuteExpression() = 
-        let executeCustom a = failwith "unexpected input"
+        let executeCustom _ = failwith "unexpected input"
     
         executeExpression (EqExpr(var "N", num 1.)) executeCustom (fun v -> num 1.)
         |> checkExecuteExpression [EqExpr(num 1., num 1.)]
@@ -305,15 +305,21 @@ module RuleTests =
         grandparent
         notParent
     ]
-
+    
     [<Test; MemoryReport>]
-    let testPersonRule() =
+    let ``test defined exist person rule``() =
         solve (GOAL "person" [stringList "Polina"]) knowledgebase
         |> checkSolve [[]]
-        solve (GOAL "person" [var "X"]) knowledgebase
-        |> checkSolve [[Variable "X", stringList "Mary"]; [Variable "X", stringList "Polina"]; [Variable "X", stringList "Evgeniy"]; [Variable "X", stringList "Solniwko"]]
+        
+    [<Test; MemoryReport>]
+    let ``test defined absent person rule``() =
         solve (GOAL "person" [stringList "Miwa"]) knowledgebase
         |> checkSolve []
+        
+    [<Test; MemoryReport>]
+    let ``test all persons rule``() =
+        solve (GOAL "person" [var "X"]) knowledgebase
+        |> checkSolve [[Variable "X", stringList "Mary"]; [Variable "X", stringList "Polina"]; [Variable "X", stringList "Evgeniy"]; [Variable "X", stringList "Solniwko"]]
 
     [<Test; MemoryReport>]
     let testParentRule() =
