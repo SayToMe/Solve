@@ -261,6 +261,8 @@ module Execute =
             | False, False -> []
             | Cut, Cut -> []
             | NotExpression _, NotExpression _ -> []
+            | _, NotExecuted _ -> []
+            | NotExecuted _, _ -> []
             | OrExpression (e1, e2), OrExpression (e1', e2') ->
                 getExprVariables e1 e1' @ getExprVariables e2 e2'
             | AndExpression (e1, e2), AndExpression (e1', e2')  ->
