@@ -83,11 +83,34 @@ module ExpressionUnify =
             | _ -> fn v
             
         let postUnifyBinaryExpressions ((t1, t2): Term * Term) ((t3, t4): Term * Term) (fn: Variable -> Term) (v: Variable) =
-            if VariableTerm(v) = t1 then
-                t3 
-            else if VariableTerm(v) = t2 then 
-                t4 
-            else fn v
+            let postUnify (t1: Term) (t2: Term) (v: Variable) =
+                match t1 with
+                | VariableTerm(v1) when v1 = v -> Some t2
+                | ListTerm(_) ->
+                    let rec unifl l1 l2 = 
+                        match l1, l2 with
+                        | NilTerm, NilTerm -> None
+                        | VarListTerm(v1), _ when v1 = v -> Some (ListTerm(l2))
+                        | TypedListTerm(VariableTerm(v1), _), TypedListTerm(t2, _) when v1 = v ->
+                            Some t2
+                        | TypedListTerm(_, r1), TypedListTerm(_, r2) ->
+                            unifl r1 r2
+                        | _ -> None
+
+                    match t1, t2 with
+                    | ListTerm(l1), ListTerm(l2) -> unifl l1 l2
+                    | _ -> failwith "Unable to unify list with not list"
+                | _ -> 
+                    match fn v with
+                    | VariableTerm(uv) when uv = v -> None
+                    | res -> Some res
+
+            match postUnify t1 t3 v with
+            | Some resv -> resv
+            | None ->
+                match postUnify t2 t4 v with
+                | Some resv -> resv
+                | _ -> fn v
         
         let rec _getChangedVariableFn initialExpression expression (changedVariableFns: (Variable -> Term) list) =
             match (initialExpression, expression) with

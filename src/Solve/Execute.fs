@@ -147,7 +147,7 @@ module Execute =
         | OrExpression (e1, e2) ->
             let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2))
             let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x)))
-            
+
             Seq.append first second |> keepOnlyFirstCut
         | AndExpression (e1, e2) ->
             let executed1 = executeExpression e1 executeCustom changeVariableFn
@@ -207,19 +207,12 @@ module Execute =
             | True -> []
             | False -> []
             | Cut -> []
-            | NotExpression e ->
-                // ?- getExprVariables e
-                []
-            | OrExpression (e1, e2) ->
-                getExprVariables e1 @ getExprVariables e2
-            | AndExpression (e1, e2) ->
-                getExprVariables e1 @ getExprVariables e2
+            | NotExpression e -> getExprVariables e
+            | OrExpression (e1, e2) -> getExprVariables e1 @ getExprVariables e2
+            | AndExpression (e1, e2) -> getExprVariables e1 @ getExprVariables e2
             | ResultExpression t -> getVariablesFromTerm t
-            | CallExpression (GoalSignature(name, args)) ->
-                args |> fromArgs |> List.collect getVariablesFromTerm
-            | CalcExpr (v, c) ->
-                // ?
-                getVariablesFromTerm v
+            | CallExpression (GoalSignature(_, args)) -> args |> fromArgs |> List.collect getVariablesFromTerm
+            | CalcExpr (v, _) -> getVariablesFromTerm v
             | EqExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
             | GrExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
             | LeExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
@@ -281,7 +274,6 @@ module Execute =
         |> List.filter (fun vt ->
             match vt with
             | (v1, VariableTerm(v2)) when v1 = v2 -> false
-            // TODO fix code above
             | (v1, ListTerm(VarListTerm(v2))) when v1 = v2 -> false
             | _ -> true
         )
@@ -317,9 +309,6 @@ module Execute =
             )
         )
 
-    //let f() =
-    //    postExecuteUnify (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results goalArguments
-
     // Idea is:
     // Expression is unified with arguments by parameters
     // Expression executes and all variables are resolved
@@ -328,22 +317,6 @@ module Execute =
     let executeCustomExpression (Goal(expr)) (executeCustom: GoalSignature -> #seq<Term list>): ((Variable * Term) list) seq =
         executeExpression expr executeCustom (fun v -> VariableTerm(v))
         |> Seq.map (fun resExpr -> getExpressionVariableValues expr resExpr)
-
-        //let arguments = toArgs goalArguments
-
-        //match unifyRule rule arguments with
-        //| Some (Rule(Signature(ruleName, unifiedRuleParameters), expr)) -> 
-        //    if name = ruleName then
-        //        let changeVar = 
-        //            (unifiedRuleParameters, arguments)
-        //            ||> List.fold2 (fun acc (Parameter(p)) (Argument(a)) -> fun v -> if VariableTerm(v) = p then a else acc v) (fun v -> VariableTerm(v))
-
-        //        let results = executeExpression expr executeCustom changeVar
-        //        let postResults = postExecuteUnify (unifyResultToParameters (fromParams unifiedRuleParameters) expr) results goalArguments
-        //        postResults
-        //    else
-        //        Seq.empty
-        //| None -> Seq.empty
 
     let exExpr (expr: Expression) (executeCustom: GoalSignature -> #seq<Term list>) (changeVariableFn: Variable -> Term): ((Variable * Term) list) seq =
         executeExpression expr executeCustom changeVariableFn

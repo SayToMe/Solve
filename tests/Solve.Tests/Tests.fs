@@ -404,7 +404,7 @@ module ListTests =
     open ExpressionUnify
     
     let headRule = RULE (SIGNATURE "head" [var "E"; var "L"]) (EqExpr(ListTerm(TypedListTerm(var "E", VarListTerm(Variable("R")))), var "L"))
-    let tailRule = RULE (SIGNATURE "tail" [var "L"; var "T"]) (EqExpr(ListTerm(TypedListTerm(var "E", VarListTerm(Variable("T")))), var "L"))
+    let tailRule = RULE (SIGNATURE "tail" [var "L"; var "T"]) (AndExpression(EqExpr(ListTerm(TypedListTerm(var "E", VarListTerm(Variable("T")))), var "L"), NotExpression(EqExpr(var "L", var "T"))))
     let memberRule = RULE (SIGNATURE "member" [var "E"; var "L"]) (OrExpression(GOAL "head" [var "E"; var "L"], AndExpression(GOAL "tail" [var "L"; var "T"], GOAL "member" [var "E"; var "T"])))
     
     let knowledgebase = [headRule; tailRule; memberRule]
@@ -442,9 +442,9 @@ module ListTests =
         |> checkSolve [[Variable "T", stringList "23"]]
 
     [<Test; MemoryReport>]
-    let ``test variable elements list tail``() =
+    let ``test variable elements list tail cant being unified``() =
         solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
-        |> checkSolve [[Variable "E", ListTerm(VarListTerm(Variable "F"))]]
+        |> checkSolve []
 
     [<Test; MemoryReport>]
     let ``test empty list member``() =
@@ -456,10 +456,15 @@ module ListTests =
         solve (GOAL "member" [var "E"; stringList "123"]) knowledgebase
         |> checkSolve [[Variable "E", char '1']; [Variable "E", char '2']; [Variable "E", char '3']]
     
-    //[<Test; MemoryReport>]
-    let ``test partly defined list member``() =
+    [<Test; MemoryReport>]
+    let ``test partly defined list member of one``() =
+        solve (GOAL "member" [var "E"; ListTerm(TypedListTerm(num 1., VarListTerm(Variable("F"))))]) knowledgebase
+        |> checkSolve [[Variable "E", num 1.]]
+
+    [<Test; MemoryReport>]
+    let ``test partly defined list member of two``() =
         solve (GOAL "member" [var "E"; ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("F")))))]) knowledgebase
-        |> checkSolve [[Variable "E", char '1']; [Variable "E", char '2']; [Variable "E", char '3']]
+        |> checkSolve [[Variable "E", num 1.]; [Variable "E", num 2.]]
 
     [<Test; MemoryReport>]
     let ``test var list params unification with var list arg``() = 
