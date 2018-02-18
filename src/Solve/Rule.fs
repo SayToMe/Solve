@@ -15,7 +15,12 @@ module Rule =
             let (Signature(name, parameters)) = self
             sprintf "%s/%d" name parameters.Length
         override self.ToString() = self.AsString
-    type Goal = Goal of Structure
+    type GoalSignature = GoalSignature of string * Argument list
+        with
+        member self.AsString =
+            let (GoalSignature(name, parameters)) = self
+            sprintf "%s/%d" name parameters.Length
+        override self.ToString() = self.AsString
 
     type Calc =
         | Value of Term
@@ -36,12 +41,13 @@ module Rule =
         | OrExpression of Expression * Expression
         | AndExpression of Expression * Expression
         | ResultExpression of Term
-        | CallExpression of Goal
+        | CallExpression of GoalSignature
         | CalcExpr of Term * Calc
         | EqExpr of Term * Term
         | GrExpr of Term * Term
         | LeExpr of Term * Term
     and Rule = Rule of Signature * Expression
+    and Goal = Goal of Expression
 
     type Result = Term list list
 
