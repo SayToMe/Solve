@@ -1,6 +1,9 @@
 ﻿module Solve.Tests
 
-open NUnit.Framework
+open Xunit
+open Xunit.Abstractions
+open Xunit.Sdk
+
 open System.Diagnostics
 
 open Solve
@@ -14,8 +17,9 @@ open Rule.Transformers
 [<DebuggerStepThrough>]
 let inline fail() = failwith ""
 [<DebuggerStepThrough>]
-let inline check (expected: 'a) (actual: 'a) = 
-    Assert.AreEqual(expected, actual, sprintf "%O != %O" expected actual)
+let inline check (expected: 'a) (actual: 'a) =
+    // sprintf "%O != %O" expected actual
+    Assert.Equal<'a>(expected, actual)
 [<DebuggerStepThrough>]
 let inline checkExecuteExpression expected actual =
     check expected (Seq.toList actual)
@@ -58,7 +62,8 @@ module NUnitExtensions =
                 sprintf "%d B" num
 
     type MemoryReportAttribute() =
-        inherit TestActionAttribute()
+        inherit Attribute()
+        //inherit TestActionAttribute()
         
         let mutable _timer = Stopwatch()
         let mutable _gcmem = 0L
@@ -66,9 +71,9 @@ module NUnitExtensions =
         
         let trackedGcCollections = [0..2]
 
-        override __.Targets = ActionTargets.Test
+        // override __.Targets = ActionTargets.Test
 
-        override __.BeforeTest test =
+        member __.BeforeTest test =
             try
                 System.AppDomain.MonitoringIsEnabled <- true
             with
@@ -80,7 +85,7 @@ module NUnitExtensions =
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- trackedGcCollections |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
-        override __.AfterTest test = 
+        member __.AfterTest test = 
             _timer.Stop()
             let gcm = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
             
@@ -92,29 +97,27 @@ module NUnitExtensions =
 
             let gcResult = sprintf "GC collects: %s Allocated: %s" gcCollects (MemoryUnit.SmartCalculate ((gcm - _gcmem) / 1024L))
             let timeResult = sprintf "Took %f ms" _timer.Elapsed.TotalMilliseconds
+            ()
+            // Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
 
-            Console.WriteLine(sprintf "***** Test %s. %s. %s." test.FullName timeResult gcResult)
-
-[<TestFixture>]
 module ReferenceTests =
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``reference test``() =
-        [1..100] |> List.iter (fun _ -> [1..10000] |> List.fold (+) 0 |> fun x -> Assert.Greater(x, 0))
+        [1..100] |> List.iter (fun _ -> [1..10000] |> List.fold (+) 0 |> fun x -> Assert.InRange(x, 0, System.Int32.MaxValue))
 
-[<TestFixture>]
 module VariableUnifyTests =
     let getChangeVariableFunction var n =
         function
         | Variable(v) when v = var -> num n
         | v -> VariableTerm(v)
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``process struct test``() =
         let changeVariable = getChangeVariableFunction "N" 1.
         VariableUnify.changeVariablesForStruct changeVariable (Structure("test", [var "N1"; var "N"; var "N"]))
         |> check (Structure("test", [var "N1"; num 1.; num 1.]))
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``post unify params with arguments test3``() =
         VariableUnify.unifyParametersWithArguments (toParams [num 10.; num 5.; var "V"]) (toArgs [num 10.; num 5.; var "V"])
         |> check (Some([num 10.; num 5.; var "V"]))
@@ -129,12 +132,11 @@ module VariableUnifyTests =
         VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [num 1.]) |> check (Some([num 1.]))
         VariableUnify.unifyParametersWithArguments (toParams [num 1.]) (toArgs [num 2.]) |> check None
 
-[<TestFixture>]
 module SimpleTests =
     open VariableUnify
     open ExpressionUnify
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testUnifyExpression() = 
         unifyExpression (EqExpr(var "N", num 1.)) (fun (Variable(v)) -> num 1.)
         |> check (EqExpr(num 1., num 1.))
@@ -143,7 +145,7 @@ module SimpleTests =
         unifyExpression (EqExpr(var "N", var "N2")) (fun (Variable(v)) -> if v = "N" then num 1. else var v)
         |> check (EqExpr(num 1., var "N2"))
     
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testUnifyCalc() =
         unifyExpression (CalcExpr(var "N", Value(num 1.))) (fun (Variable(v)) -> num 2.)
         |> check (CalcExpr(num 2., Value(num 1.)))
@@ -151,14 +153,14 @@ module SimpleTests =
         unifyExpression (CalcExpr(var "N", Value(StructureTerm(Structure("+", [var "N"; num 1.]))))) (fun (Variable(v)) -> num 2.)
         |> check (CalcExpr(num 2., Value(StructureTerm(Structure("+", [num 2.; num 1.])))))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testUnifyRule() = 
         unifyRule (RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))) (toArgs [num 1.])
         |> check (Some(RULE (SIGNATURE "eq1" [num 1.]) (EqExpr(num 1., num 1.))))
     
     open Execute
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testExecuteCalc() = 
         executeCalc (Value(num 1.))
         |> check (NumberTerm(1.))
@@ -166,7 +168,7 @@ module SimpleTests =
         executeCalc (Plus(Value(num 1.), Value(num 1.)))
         |> check (NumberTerm(2.))
     
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testExecuteExpression() = 
         let executeCustom a = failwith "unexpected input"
     
@@ -179,7 +181,7 @@ module SimpleTests =
 
     open Solve
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testExecute() = 
         solve (GOAL "eq1" [var "N"]) [RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))]
         |> checkSolve [[num 1.]]
@@ -202,28 +204,28 @@ module SimpleTests =
         solve (GOAL "innervar" [var "N"]) [RULE (SIGNATURE "innervar" [var "N"]) (AndExpression(EqExpr(var "Temp", num 1.), EqExpr(var "N", var "Temp")))]
         |> checkSolve [[num 1.]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testExecuteStructure() =
         solve (GOAL "structure execute" [num 2.; var "Res"]) [RULE (SIGNATURE "structure execute" [var "N"; var "R"]) (CalcExpr(var "R", Value(StructureTerm(Structure("+", [var "N"; num 1.])))))]
         |> checkSolve [[num 2.; num 3.]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testCut() =
         solve (GOAL "cut" [var "R"]) [RULE (SIGNATURE "cut" [var "R"]) (AndExpression(OrExpression(EqExpr(var "R", num 1.), EqExpr(var "R", num 2.)), Cut))]
         |> checkSolve [[num 1.]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testComplexCut() =
         solve (GOAL "cut" [var "R1"; var "R2"]) [RULE (SIGNATURE "cut" [var "R1"; var "R2"]) (AndExpression(AndExpression(OrExpression(EqExpr(var "R1", num 1.), EqExpr(var "R1", num 2.)), OrExpression(EqExpr(var "R2", num 1.), EqExpr(var "R2", num 2.))), Cut))]
         |> checkSolve [[num 1.; num 1.]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let checkLazySolve() =
         solve (GOAL "lazy infinite" [num 1.; var "R"]) [RULE (SIGNATURE "lazy infinite" [var "C"; var "R"]) (OrExpression(EqExpr(var "C", var "R"), AndExpression(CalcExpr(var "NextC", Plus(Value(var "C"), Value(num 1.))), CallExpression(Goal(Structure("lazy infinite", [var "NextC"; var "R"]))))))]
         |> Seq.take 3
         |> checkSolve ([1..3] |> List.map (fun x -> [num 1.; num (float x)]))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let realTest() =
         solve (GOAL "eq1_both" [var "N"; var "Res"]) [RULE (SIGNATURE "eq1_both" [var "N1"; var "N2"]) (AndExpression((EqExpr(var "N1", num 1.), (EqExpr(var "N2", num 1.)))))]
         |> checkSolve [[num 1.; num 1.]]
@@ -241,7 +243,7 @@ module SimpleTests =
         solve (GOAL "inn" [var "R"]) [getN; inn]
         |> checkSolve [[num 1.]]
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test applicative state``() =
         let r0 = RULE (SIGNATURE "F0" [num 1.]) True
         let r1 = RULE (SIGNATURE "F1" [var "X"]) (AndExpression(CallExpression(GOAL "F0" [var "X"]), CallExpression(GOAL "F0" [var "X"])))
@@ -249,7 +251,7 @@ module SimpleTests =
         solve (GOAL "F2" [var "N"]) [r0; r1; r2]
         |> checkSolve [[num 1.]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test factorial rule``() =
         let leftOr = AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.))
         let rightOr = AndExpression(GrExpr(var "N", num 1.), AndExpression(CalcExpr(var "N1", Subsctruct(Value(var "N"), Value(num 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [var "N1"; var "R1"]))), CalcExpr(var "Res", Multiply(Value(var "R1"), Value(var "N"))))))
@@ -267,7 +269,7 @@ module SimpleTests =
 
         [1..10] |> List.iter (float >> checkf)
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let cutFactorialTest() =
         let leftOr = AndExpression(AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.)), Cut)
         let rightOr = AndExpression(CalcExpr(var "N1", Subsctruct(Value(var "N"), Value(num 1.))), AndExpression(CallExpression(Goal(Structure("factorial", [var "N1"; var "R1"]))), CalcExpr(var "Res", Multiply(Value(var "R1"), Value(var "N")))))
@@ -285,7 +287,6 @@ module SimpleTests =
 
         [1..10] |> List.iter (float >> checkf)
 
-[<TestFixture>]
 module RuleTests =
     let person p = RULE(SIGNATURE "person" [stringList p]) True
     let parent p d = RULE(SIGNATURE "parent" [stringList p; stringList d]) True
@@ -306,7 +307,7 @@ module RuleTests =
         notParent
     ]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testPersonRule() =
         solve (GOAL "person" [stringList "Polina"]) knowledgebase
         |> checkSolve [[stringList "Polina"]]
@@ -315,14 +316,14 @@ module RuleTests =
         solve (GOAL "person" [stringList "Miwa"]) knowledgebase
         |> checkSolve []
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testParentRule() =
         solve (GOAL "parent" [stringList "Polina"; var "Descendant"]) knowledgebase
         |> checkSolve [[stringList "Polina"; stringList "Evgeniy"]]
         solve (GOAL "parent" [var "Parent"; var "Descendant"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Solniwko"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]]
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testParentBidirectRule_person_first() =
         let biparent_pf = RULE(SIGNATURE "biparent_person_first" [var "P"; var "C"]) (AndExpression(CallExpression(GOAL "person" [var "P"]), (AndExpression(CallExpression(GOAL "person" [var "C"]), CallExpression(GOAL "parent" [var "P"; var "C"])))))
         let knowledgebase = knowledgebase@[biparent_pf]
@@ -330,7 +331,7 @@ module RuleTests =
         solve (GOAL "biparent_person_first" [var "Parent"; var "Descendant"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]; [stringList "Solniwko"; stringList "Polina"]]
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testParentBidirectRule_person_last() =
         let biparent_pl = RULE(SIGNATURE "biparent_person_last" [var "P"; var "C"]) (AndExpression(CallExpression(GOAL "parent" [var "P"; var "C"]), AndExpression(CallExpression(GOAL "person" [var "P"]), CallExpression(GOAL "person" [var "C"]))))
         let knowledgebase = knowledgebase@[biparent_pl]
@@ -338,7 +339,7 @@ module RuleTests =
         solve (GOAL "biparent_person_last" [var "Parent"; var "Descendant"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Polina"]; [stringList "Solniwko"; stringList "Polina"]; [stringList "Polina"; stringList "Evgeniy"]]
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testNotParentRule() =
         solve (GOAL "notParent" [var "NotParent"]) knowledgebase
         |> checkSolve [[stringList "Evgeniy"]]
@@ -346,14 +347,14 @@ module RuleTests =
         solve (GOAL "notParent" [stringList "Mary"]) knowledgebase
         |> checkSolve []
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let testGrandparentRule() =
         solve (GOAL "grandparent" [var "GrandParent"; var "Descendant"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Evgeniy"]; [stringList "Solniwko"; stringList "Evgeniy"]]
         solve (GOAL "grandparent" [stringList "Mary"; stringList "Evgeniy"]) knowledgebase
         |> checkSolve [[stringList "Mary"; stringList "Evgeniy"]]
 
-    //[<Test; MemoryReport>]
+    //[<Fact; MemoryReport>]
     let bigTest() =
         let r = System.Random()
         let persons = [1..1000] |> List.map (fun i -> System.Guid.NewGuid().ToString()) |> List.map person
@@ -373,7 +374,6 @@ module RuleTests =
 
         toTest |> List.map (fun t -> solve t kb |> Seq.toList) |> ignore
 
-[<TestFixture>]
 module ListTests =
     open VariableUnify
     open ExpressionUnify
@@ -384,69 +384,69 @@ module ListTests =
     
     let knowledgebase = [headRule; tailRule; memberRule]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test empty list head``() =
         solve (GOAL "head" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test one element list head``() =
         solve (GOAL "head" [var "E"; stringList "1"]) knowledgebase
         |> checkSolve [[char '1'; stringList "1"]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test two elements list head``() =
         solve (GOAL "head" [var "E"; stringList "12"]) knowledgebase
         |> checkSolve [[char '1'; stringList "12"]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test empty list tail``() =
         solve (GOAL "tail" [stringList ""; var "T"]) knowledgebase
         |> checkSolve []
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test one element list tail``() =
         solve (GOAL "tail" [stringList "1"; var "T"]) knowledgebase
         |> checkSolve [[stringList "1"; stringList ""]]
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test any elements list tail``() =
         solve (GOAL "tail" [stringList "12"; var "T"]) knowledgebase
         |> checkSolve [[stringList "12"; stringList "2"]]
         solve (GOAL "tail" [stringList "123"; var "T"]) knowledgebase
         |> checkSolve [[stringList "123"; stringList "23"]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test variable elements list tail``() =
         solve (GOAL "tail" [ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); var "E"]) knowledgebase
         |> checkSolve [[ListTerm(TypedListTerm(char '1', VarListTerm(Variable("F")))); ListTerm(VarListTerm(Variable("F")))]]
 
-    //[<Test; MemoryReport>]
+    //[<Fact; MemoryReport>]
     let ``test empty list member``() =
         solve (GOAL "member" [var "E"; stringList ""]) knowledgebase
         |> checkSolve []
 
-    //[<Test; MemoryReport>]
+    //[<Fact; MemoryReport>]
     let ``test defined list member``() =
         solve (GOAL "member" [var "E"; stringList "123"]) knowledgebase
         |> checkSolve [[var "E"; stringList "1"]; [var "E"; stringList "2"]; [var "E"; stringList "3"]]
     
-    //[<Test; MemoryReport>]
+    //[<Fact; MemoryReport>]
     let ``test partly defined list member``() =
         solve (GOAL "member" [var "E"; ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("F")))))]) knowledgebase
         |> checkSolve [[var "E"; stringList "1"]; [var "E"; stringList "2"]; [var "E"; stringList "E"]]
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test var list params unification with var list arg``() = 
         unifyParametersWithArguments [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))] [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]
         |> check (Some([ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test var list rule unification with var list doesn't change inner var``() = 
         unifyRule (RULE (SIGNATURE "eqvarlist" [ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]) True) [Argument(ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm)))]
         |> check (Some(Rule(Signature("eqvarlist", [Parameter(ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm)))]), True)))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let ``test var list unification with var list``() =
         solve (GOAL "un" [ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm))]) [RULE(SIGNATURE "un" [ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]) True]
         |> checkSolve [[ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm))]]
@@ -454,28 +454,26 @@ module ListTests =
 open Solve.Parse
 open PrologParser
 
-[<TestFixture>]
 module ParserTests =
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let checkEmptyListParse() =
         parse "?- list([])."
         |> check (Some(CallParseResult(GOAL "list" [ListTerm(NilTerm)])))
         
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let checkDefinedListParse() =
         parse "?- list([1,2,3])."
         |> check (Some(CallParseResult(GOAL "list" [ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., TypedListTerm(num 3., NilTerm))))])))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let checkPartlyDefinedListParse() =
         parse "?- list([1 | X])."
         |> check (Some(CallParseResult(GOAL "list" [ListTerm(TypedListTerm(num 1., VarListTerm(Variable("X"))))])))
 
-[<TestFixture>]
 module InteractiveTests =
     let interactive = Solve.Interactive()
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let parseFacts() =
         interactive.NewInput "fact(1)." |> check (RuleInfo(RULE(SIGNATURE "fact" [num 1.]) True))
         interactive.NewInput "fact(2)." |> check (RuleInfo(RULE(SIGNATURE "fact" [num 2.]) True))
@@ -484,21 +482,21 @@ module InteractiveTests =
         interactive.NewInput "fact(x)." |> check (RuleInfo(RULE(SIGNATURE "fact" [atom "x"]) True))
         interactive.NewInput "fact(y)." |> check (RuleInfo(RULE(SIGNATURE "fact" [atom "y"]) True))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let parseEqGrLeRule() =
         interactive.NewInput "rule(X) :- X = 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (EqExpr(var "X", num 1.))))
         interactive.NewInput "rule(X) :- X > 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (GrExpr(var "X", num 1.))))
         interactive.NewInput "rule(X) :- X < 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (LeExpr(var "X", num 1.))))
     
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let parseAndRule() =
         interactive.NewInput "rule(X, Y) :- X = 1, Y = 2." |> check (RuleInfo(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (AndExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
     
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let parseOrRule() =
         interactive.NewInput "rule(X, Y) :- X = 1 ; Y = 2." |> check (RuleInfo(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (OrExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
 
-    [<Test; MemoryReport>]
+    [<Fact; MemoryReport>]
     let parseFactorialRule() =
         interactive.NewInput "factorial(1,1)." |> check (RuleInfo(RULE(SIGNATURE "factorial" [num 1.; num 1.]) True))
 
