@@ -1,4 +1,4 @@
 FSharp.Core
 group Test
-xunit
-xunit.Runners
+NUnit
+NUnit.Runners
