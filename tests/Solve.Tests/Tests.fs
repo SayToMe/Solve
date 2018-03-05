@@ -66,23 +66,28 @@ module NUnitExtensions =
         
         let trackedGcCollections = [0..2]
 
+        let totalAllocatedMemorySize() =
+            // AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            0L
+
         override __.Targets = ActionTargets.Test
 
         override __.BeforeTest test =
             try
-                System.AppDomain.MonitoringIsEnabled <- true
+                // System.AppDomain.MonitoringIsEnabled <- true
+                ()
             with
             | _ -> ()
 
             _timer.Start()
             GC.Collect()
-            _gcmem <- AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            _gcmem <- totalAllocatedMemorySize()
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- trackedGcCollections |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
         override __.AfterTest test = 
             _timer.Stop()
-            let gcm = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            let gcm = totalAllocatedMemorySize()
             
             let gcCollects =
                 trackedGcCollections
