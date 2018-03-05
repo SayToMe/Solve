@@ -27,3 +27,6 @@ group Test
   nuget NUnit.Runners ~> 3
   nuget Microsoft.NET.Test.Sdk ~> 15
   nuget NUnit3TestAdapter ~> 3
+
+group TestApp
+  source https://nuget.org/api/v2

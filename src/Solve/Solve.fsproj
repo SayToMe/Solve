@@ -63,6 +63,10 @@
   <ItemGroup>
     <None Include="paket.references" />
     <None Include="paket.template" />
+    <Content Include="InstallationDummyFile.txt">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="App.config" />
     <Compile Include="Types.fs" />
     <Compile Include="Rule.fs" />
     <Compile Include="VariableUnify.fs" />
@@ -82,6 +86,9 @@
     <Compile Include="Parse.fs" />
     <Compile Include="Interactive.fs" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="App.config" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" Version="4.3.4" />
