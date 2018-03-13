@@ -17,13 +17,6 @@ let parse = Solve.Parse.parsePlString
 
 [<TestFixture>]
 module ParserTests =
-    let (|>>) = Solve.Parse.oper
-
-    //[<Test; MemoryReport>]
-    //let checkEmptyParse() =
-        //Solve.Parse.testRun Solve.Prims.pnumber "1"
-        //|> check (num 1.)
-
     [<Test; MemoryReport>]
     let checkEmptyListParse() =
         parse "?- list([])."

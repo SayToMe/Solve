@@ -1,6 +1,8 @@
 ﻿namespace Solve
 
 open Solve
+open Solve.Rule.Transformers
+
 open FParsec
 
 open Solve.TermTypes
@@ -9,12 +11,12 @@ open Solve.Rule
 
 type ParseResult =
     | RuleParseResult of Rule
-    | CallParseResult of Goal
+    | CallParseResult of Expression
     | ParseError of string
 
 module Prims =
     let ws = spaces // skips any whitespace
-    let str = pstring    
+    let str = pstring
 
     let listBetweenStrings sOpen sClose pElement f =
         between (str sOpen) (str sClose)
@@ -79,7 +81,7 @@ module Prims =
 
     let pdef = (pstring ":-" >>. (pfact <|> prule) .>> pstring ".") |>> RuleParseResult
 
-    let pquery = (pstring "?-" >>. pstructurePlain .>> pstring ".") |>> (CallParseResult << Goal)
+    let pquery = (pstring "?-" >>. pstructurePlain .>> pstring ".") |>> (fun (Structure(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs l))))
 
     let pinteractive = pquery <|> pdef
 
