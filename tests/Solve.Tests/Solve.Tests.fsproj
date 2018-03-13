@@ -1,12 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Tests.fs" />
     <None Include="paket.references" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="ParseTests.fs" />
+    <None Include="InteractiveTests.fs" />
     <None Include="Script.fsx" />
     <Compile Include="Program.fs" />
   </ItemGroup>

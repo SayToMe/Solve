@@ -1,22 +1,23 @@
 RESTRICTION: >= net45
 NUGET
   remote: https://www.nuget.org/api/v2
+    FParsec (1.0.3)
+      FSharp.Core (>= 4.0.0.1)
+    FParsecCS (1.0.3-alpha-170404)
+      FSharp.Core (>= 4.1) - restriction: && (>= net45) (>= netstandard1.6)
+      NETStandard.Library (>= 1.6.1) - restriction: && (>= net45) (>= netstandard1.6)
+      System.Globalization.Extensions (>= 4.3) - restriction: && (>= net45) (>= netstandard1.6)
+      System.Reflection.Emit.Lightweight (>= 4.3) - restriction: && (>= net45) (>= netstandard1.6)
+      System.Runtime.Serialization.Formatters (>= 4.3) - restriction: && (>= net45) (>= netstandard1.6)
     FSharp.Core (4.3) - redirects: force
-    FsLexYacc (7.0.6)
-      FsLexYacc.Runtime (>= 7.0.6 < 7.1)
-    FsLexYacc.Runtime (7.0.6)
-      FSharp.Core (>= 3.1.2.5)
-    FSPowerPack.Community (3.0)
-      FSPowerPack.Linq.Community
-      FSPowerPack.Metadata.Community
-      FSPowerPack.Parallel.Seq.Community
-    FSPowerPack.Core.Community (3.0)
-    FSPowerPack.Linq.Community (3.0)
-      FSPowerPack.Core.Community
-    FSPowerPack.Metadata.Community (3.0)
-      FSPowerPack.Core.Community
-    FSPowerPack.Parallel.Seq.Community (3.0)
-      FSPowerPack.Core.Community
+    Microsoft.NETCore.Platforms (2.0.1) - restriction: || (&& (>= monoandroid) (>= net45) (>= netstandard1.6)) (&& (>= monotouch) (>= net45)) (&& (>= net45) (>= netcoreapp2.0)) (&& (>= net45) (< netstandard1.0) (>= netstandard1.6)) (&& (>= net45) (< netstandard1.3) (>= netstandard1.6) (>= wpa81)) (&& (>= net45) (< netstandard1.5) (>= netstandard1.6) (>= uap10.0)) (&& (>= net45) (>= netstandard1.6) (< portable-net45+win8+wpa81)) (&& (>= net45) (>= netstandard1.6) (< portable-net451+win81+wpa81)) (&& (>= net45) (>= netstandard1.6) (>= uap10.1)) (&& (>= net45) (>= xamarinios)) (&& (>= net45) (>= xamarinmac)) (&& (>= net45) (>= xamarintvos)) (&& (>= net45) (>= xamarinwatchos)) (&& (>= net451) (< netstandard1.3) (>= netstandard1.6)) (&& (>= net46) (< netstandard1.4) (>= netstandard1.6)) (&& (>= net461) (>= netstandard1.6))
+    NETStandard.Library (2.0.1) - restriction: && (>= net45) (>= netstandard1.6)
+      Microsoft.NETCore.Platforms (>= 1.1)
+    System.Globalization.Extensions (4.3) - restriction: && (>= net45) (>= netstandard1.6)
+    System.Reflection.Emit.Lightweight (4.3) - restriction: && (>= net45) (>= netstandard1.6)
+    System.Runtime.Serialization.Formatters (4.3) - restriction: && (>= net45) (>= netstandard1.6)
+      System.Runtime.Serialization.Primitives (>= 4.3) - restriction: || (&& (>= net45) (>= netstandard1.3) (< netstandard1.4)) (&& (>= net45) (>= netstandard1.4)) (>= net46)
+    System.Runtime.Serialization.Primitives (4.3) - restriction: || (&& (>= net45) (>= netstandard1.6)) (&& (>= net46) (>= netstandard1.6))
 
 GROUP Build
 NUGET
@@ -1307,6 +1308,3 @@ NUGET
       System.Xml.ReaderWriter (>= 4.3) - restriction: && (< monoandroid) (< monotouch) (< net46) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
       System.Xml.XmlDocument (>= 4.3) - restriction: || (&& (< monoandroid) (< monotouch) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)) (>= net46)
       System.Xml.XPath (>= 4.3) - restriction: || (&& (< monoandroid) (< monotouch) (>= netstandard1.3) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)) (>= net46)
-
-GROUP TestApp
-

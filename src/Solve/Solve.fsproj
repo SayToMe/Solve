@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
@@ -24,48 +23,12 @@
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="FsLexYacc.Runtime">
-      <HintPath>..\..\packages\FsLexYacc.Runtime\lib\portable-net45+netcore45+wpa81+wp8+MonoAndroid10+MonoTouch10\FsLexYacc.Runtime.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="FSharp.PowerPack">
-      <HintPath>..\..\packages\FSPowerPack.Core.Community\Lib\Net40\FSharp.PowerPack.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="FSharp.PowerPack.Linq">
-      <HintPath>..\..\packages\FSPowerPack.Linq.Community\Lib\Net40\FSharp.PowerPack.Linq.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="FSharp.PowerPack.Metadata">
-      <HintPath>..\..\packages\FSPowerPack.Metadata.Community\Lib\Net40\FSharp.PowerPack.Metadata.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="FSharp.PowerPack.Parallel.Seq">
-      <HintPath>..\..\packages\FSPowerPack.Parallel.Seq.Community\Lib\Net40\FSharp.PowerPack.Parallel.Seq.dll</HintPath>
-      <Private>True</Private>
-      <Paket>True</Paket>
-    </Reference>
-  </ItemGroup>
-  <Import Project="..\..\packages\FsLexYacc\build\FsLexYacc.targets" Condition="Exists('..\..\packages\FsLexYacc\build\FsLexYacc.targets')" Label="Paket" />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DocumentationFile>bin\Debug\netstandard2.0\Solve.XML</DocumentationFile>
+  </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
     <None Include="paket.template" />
-    <Content Include="InstallationDummyFile.txt">
-      <Paket>True</Paket>
-    </Content>
     <Content Include="App.config" />
     <Compile Include="Types.fs" />
     <Compile Include="Rule.fs" />
@@ -73,15 +36,6 @@
     <Compile Include="ExpressionUnify.fs" />
     <Compile Include="Execute.fs" />
     <None Include="Script.fsx" />
-    <Content Include="packages.config" />
-    <FsYacc Include="PrologParser.fsy">
-      <OtherFlags>--module PrologParser</OtherFlags>
-    </FsYacc>
-    <FsLex Include="PrologLexer.fsl">
-      <OtherFlags>--unicode</OtherFlags>
-    </FsLex>
-    <Compile Include="PrologParser.fs" />
-    <Compile Include="PrologLexer.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Parse.fs" />
     <Compile Include="Interactive.fs" />
@@ -91,6 +45,7 @@
     <Content Remove="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="FParsec" Version="1.0.4-RC3" />
     <PackageReference Include="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

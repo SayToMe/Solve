@@ -2,23 +2,25 @@
 
 open Rule
 open TermTypes
+open FParsec
 
 open Solve.Parse
 
 type InteractiveResult =
     | RuleInfo of Rule
     | SolveResult of string seq
+    | Error of string
     | NoResult
 
 type Interactive() =
     let mutable _knowledgebase = []
 
     member self.NewInput (text: string) =
-        match parse text with
-        | Some (PrologParser.RuleParseResult(rule)) -> 
+        match parsePlString text with
+        | RuleParseResult(rule) -> 
             _knowledgebase <- _knowledgebase@[rule]
             RuleInfo(rule)
-        | Some (PrologParser.CallParseResult goal) -> 
+        | CallParseResult goal -> 
             let solved = Solve.solve goal _knowledgebase
             let mapped =
                 solved
@@ -50,4 +52,4 @@ type Interactive() =
                          |> List.fold concatVarUnificationResult ""
                 )
             SolveResult mapped
-        | None -> NoResult
+        | ParseError(err) -> Error err

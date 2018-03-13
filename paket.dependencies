@@ -8,9 +8,9 @@ source https://nuget.org/api/v2
 # To increase the minimum assumed F# version to F# 4.1, change to 
 #     nuget FSharp.Core ~> 4.1.0 redirects: force
 
+nuget FParsec
+nuget FParsecCs
 nuget FSharp.Core ~> 4.3.0.0 redirects: force
-nuget FsLexYacc
-nuget FSPowerPack.Community
 
 group Build
   source https://nuget.org/api/v2
@@ -28,5 +28,4 @@ group Test
   nuget Microsoft.NET.Test.Sdk ~> 15
   nuget NUnit3TestAdapter ~> 3
 
-group TestApp
   source https://nuget.org/api/v2
