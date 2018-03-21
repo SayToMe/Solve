@@ -70,11 +70,11 @@ module Prims =
             attempt <| (pempty() <|> pnormalList () <|> pvariableList ())
         _pterm () <|> pstructure () <|> plist ()
 
-    let psignature () =
+    let psignature =
         pipe2 (patomPlain ()) (listBetweenStrings "(" ")" (pterm ()) id) (fun atom terms ->
             Signature(atom, Transformers.toParams terms ))
 
-    let pfact () = psignature () .>> pstring "." |>> (fun s -> Rule(s, True))
+    let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
     let pbody () =
         let pcalc () =
@@ -104,13 +104,13 @@ module Prims =
                 ptrueExpr () <|> pfalseExpr () <|> peqExpr () <|> pgrExpr () <|> pleExpr ()
         attempt <| _pbody true()
     
-    let prule () = pipe4 (psignature () .>> ws) (pstring ":-" .>> ws) (pbody ()) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
+    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) (pbody ()) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
-    let pdef () = (pstring ":-" .>> ws) >>. (pfact () <|> prule ()) |>> RuleParseResult
+    let pdef = (pstring ":-" .>> ws) >>. (pfact <|> prule) |>> RuleParseResult
 
-    let pquery () = (pstring "?-" .>> ws) >>. psignature () .>> (pstring ".") |>> (fun (Signature(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs <| fromParams l))))
+    let pquery = (pstring "?-" .>> ws) >>. psignature .>> (pstring ".") |>> (fun (Signature(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs <| fromParams l))))
 
-    let pinteractive = pquery () <|> pdef ()
+    let pinteractive = pquery <|> pdef
 
 module Parse =
     open Prims

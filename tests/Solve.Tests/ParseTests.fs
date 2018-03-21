@@ -41,10 +41,10 @@ module PrimsTests =
     let parseListWithVariableTail() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1,2|A]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("A"))))))
     
     [<Test; MemoryReport>]
-    let parseNonEmptySignature() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.psignature()) "a(1)." |> checkSuccess (SIGNATURE "a" [num 1.])
+    let parseNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.psignature "a(1)." |> checkSuccess (SIGNATURE "a" [num 1.])
     
     [<Test; MemoryReport>]
-    let parseFactWithNonEmptySignature() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pfact()) "a(1)." |> checkSuccess (FACT (SIGNATURE "a" [num 1.]))
+    let parseFactWithNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pfact "a(1)." |> checkSuccess (FACT (SIGNATURE "a" [num 1.]))
     
     [<Test; MemoryReport>]
     let parseEqBodyExpession() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pbody()) "a12=b32" |> checkSuccess (EqExpr(atom "a12", atom "b32"))
@@ -54,12 +54,12 @@ module PrimsTests =
     
     [<Test; MemoryReport>]
     let parseRuleWithEqExpressionAndNonEmptySignature() = 
-        Solve.Parse.Parse.testRun (Solve.Parse.Prims.prule()) "a12(12):-a1=a2."
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2."
         |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (EqExpr(atom "a1", atom "a2")))
 
     [<Test; MemoryReport>]
     let parseRuleWithAndExpressionAndNonEmptySiganture() = 
-        Solve.Parse.Parse.testRun (Solve.Parse.Prims.prule()) "a12(12):-a1=a2,a1=b2."
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2,a1=b2."
         |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a2"), EqExpr(atom "a1", atom "b2"))))
 
 [<TestFixture>]
