@@ -58,17 +58,17 @@ module Prims =
         |>> (VariableTerm << Variable)
  
     let pterm () = 
-        let _pterm () = patom <|> pvariable <|> pnumber <|> pnil <|> pfalse <|> ptrue <|> pchar
+        let _pterm = patom <|> pvariable <|> pnumber <|> pnil <|> pfalse <|> ptrue <|> pchar
         
-        let pstructure () = attempt <| pipe2 patomPlain (listBetweenStrings "(" ")" (_pterm ()) id) (fun atom terms ->
+        let pstructure = attempt <| pipe2 patomPlain (listBetweenStrings "(" ")" _pterm id) (fun atom terms ->
             Structure(atom, terms )) |>> StructureTerm
-        let plist () =
-            let pempty () = attempt pnil
-            let pnormalList () = attempt <| listBetweenStrings "[" "]" (_pterm ()) (List.rev >> List.fold (fun acc s -> TypedListTerm(s, acc)) NilTerm >> ListTerm)
-            let pvariableList () = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. ws >>. pvariablePlain .>> ws .>> str "]") (str ",") (_pterm ()) (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
+        let plist =
+            let pempty = attempt pnil
+            let pnormalList = attempt <| listBetweenStrings "[" "]" _pterm (List.rev >> List.fold (fun acc s -> TypedListTerm(s, acc)) NilTerm >> ListTerm)
+            let pvariableList = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. ws >>. pvariablePlain .>> ws .>> str "]") (str ",") _pterm (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
 
-            attempt <| (pempty() <|> pnormalList () <|> pvariableList ())
-        _pterm () <|> pstructure () <|> plist ()
+            attempt <| (pempty <|> pnormalList <|> pvariableList)
+        _pterm <|> pstructure <|> plist
 
     let psignature =
         pipe2 patomPlain (listBetweenStrings "(" ")" (pterm ()) id) (fun atom terms ->
