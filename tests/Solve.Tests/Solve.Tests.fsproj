@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <FSharpCoreImplicitPackageVersion>4.3.4</FSharpCoreImplicitPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
