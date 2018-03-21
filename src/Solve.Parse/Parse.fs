@@ -30,7 +30,7 @@ module Prims =
                 (ws >>. sepBy (pElement .>> ws) (str "," .>> ws) |>> f)
     
     let listBetweenStringsCustom sOpen sClose separatorParser pElement f =
-        pipe3 (sOpen) (ws >>. sepBy (pElement .>> ws) (separatorParser .>> ws)) (sClose) f
+        pipe3 (sOpen .>> ws) (ws >>. sepBy (pElement .>> ws) (separatorParser .>> ws)) (sClose .>> ws) f
 
     let ptrue () = stringReturn "true"  (TypedTerm <| TypedBoolTerm(BoolTerm(true)))
     let pfalse () = stringReturn "false" (TypedTerm <| TypedBoolTerm(BoolTerm(false)))
@@ -60,14 +60,14 @@ module Prims =
     let pterm () = 
         let _pterm () = (patom () <|> pvariable () <|> pnumber () <|> pnil () <|> pfalse () <|> ptrue () <|> pchar ())
         
-        let pstructure () = pipe2 (patomPlain ()) (listBetweenStrings "(" ")" (_pterm ()) id) (fun atom terms ->
+        let pstructure () = attempt <| pipe2 (patomPlain ()) (listBetweenStrings "(" ")" (_pterm ()) id) (fun atom terms ->
             Structure(atom, terms )) |>> StructureTerm
         let plist () =
             let pempty () = attempt (pnil ())
-            let pvariableList () = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. pvariablePlain () .>> str "]") (str ",") (patom ()) (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
             let pnormalList () = attempt <| listBetweenStrings "[" "]" (_pterm ()) (List.rev >> List.fold (fun acc s -> TypedListTerm(s, acc)) NilTerm >> ListTerm)
-            
-            pempty() <|> pnormalList () <|> pvariableList ()
+            let pvariableList () = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. ws >>. pvariablePlain () .>> ws .>> str "]") (str ",") (_pterm ()) (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
+
+            attempt <| (pempty() <|> pnormalList () <|> pvariableList ())
         _pterm () <|> pstructure () <|> plist ()
 
     let psignature () =

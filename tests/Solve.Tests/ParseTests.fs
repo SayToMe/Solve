@@ -38,6 +38,9 @@ module PrimsTests =
     let parseListFromTwoDifferentTerms() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1,a]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(atom "a", NilTerm))))
     
     [<Test; MemoryReport>]
+    let parseListWithVariableTail() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1,2|A]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("A"))))))
+    
+    [<Test; MemoryReport>]
     let parseNonEmptySignature() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.psignature()) "a(1)." |> checkSuccess (SIGNATURE "a" [num 1.])
     
     [<Test; MemoryReport>]
