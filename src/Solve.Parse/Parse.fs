@@ -110,7 +110,7 @@ module Prims =
 
     let pquery () = (pstring "?-" .>> ws) >>. psignature () .>> (pstring ".") |>> (fun (Signature(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs <| fromParams l))))
 
-    let pinteractive () = pquery () <|> pdef ()
+    let pinteractive = pquery () <|> pdef ()
 
 module Parse =
     open Prims
@@ -127,7 +127,7 @@ module Parse =
         |> convertResult
 
     let parsePlString str =
-        run (pinteractive ()) str
+        run pinteractive str
         |> convertResult
     
     // UTF8 is the default, but it will detect UTF16 or UTF32 byte-order marks automatically
@@ -136,10 +136,10 @@ module Parse =
         runParserOnString json () fileName (System.IO.File.ReadAllText(fileName, encoding))
         |> convertResult
     #else
-        runParserOnFile (pinteractive ()) () fileName encoding
+        runParserOnFile pinteractive () fileName encoding
         |> convertResult
     #endif
     
     let parsePlStream stream encoding =
-        runParserOnStream (pinteractive ()) () "" stream System.Text.Encoding.UTF8
+        runParserOnStream pinteractive () "" stream System.Text.Encoding.UTF8
         |> convertResult
