@@ -47,10 +47,10 @@ module PrimsTests =
     let parseFactWithNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pfact "a(1)." |> checkSuccess (FACT (SIGNATURE "a" [num 1.]))
     
     [<Test; MemoryReport>]
-    let parseEqBodyExpession() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pbody()) "a12=b32" |> checkSuccess (EqExpr(atom "a12", atom "b32"))
+    let parseEqBodyExpession() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32" |> checkSuccess (EqExpr(atom "a12", atom "b32"))
     
     [<Test; MemoryReport>]
-    let parseAndExpressionWithTwoEqs() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pbody()) "a12=b32,b32=b33" |> checkSuccess (AndExpression(EqExpr(atom "a12", atom "b32"), EqExpr(atom "b32", atom "b33")))
+    let parseAndExpressionWithTwoEqs() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32,b32=b33" |> checkSuccess (AndExpression(EqExpr(atom "a12", atom "b32"), EqExpr(atom "b32", atom "b33")))
     
     [<Test; MemoryReport>]
     let parseRuleWithEqExpressionAndNonEmptySignature() = 

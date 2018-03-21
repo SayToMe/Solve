@@ -76,7 +76,7 @@ module Prims =
 
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
-    let pbody () =
+    let pbody =
         let pcalc () =
             let rec _pcalc() =
                 let pval = pterm |>> Value
@@ -104,7 +104,7 @@ module Prims =
                 ptrueExpr () <|> pfalseExpr () <|> peqExpr () <|> pgrExpr () <|> pleExpr ()
         attempt <| _pbody true()
     
-    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) (pbody ()) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
+    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) pbody (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
     let pdef = (pstring ":-" .>> ws) >>. (pfact <|> prule) |>> RuleParseResult
 
