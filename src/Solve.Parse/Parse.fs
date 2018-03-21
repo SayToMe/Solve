@@ -57,7 +57,7 @@ module Prims =
         pvariablePlain
         |>> (VariableTerm << Variable)
  
-    let pterm () = 
+    let pterm = 
         let _pterm = patom <|> pvariable <|> pnumber <|> pnil <|> pfalse <|> ptrue <|> pchar
         
         let pstructure = attempt <| pipe2 patomPlain (listBetweenStrings "(" ")" _pterm id) (fun atom terms ->
@@ -71,7 +71,7 @@ module Prims =
         _pterm <|> pstructure <|> plist
 
     let psignature =
-        pipe2 patomPlain (listBetweenStrings "(" ")" (pterm ()) id) (fun atom terms ->
+        pipe2 patomPlain (listBetweenStrings "(" ")" pterm id) (fun atom terms ->
             Signature(atom, Transformers.toParams terms ))
 
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
@@ -79,17 +79,17 @@ module Prims =
     let pbody () =
         let pcalc () =
             let rec _pcalc() =
-                let pval = pterm () |>> Value
+                let pval = pterm |>> Value
                 let plus = pipe3 (_pcalc()) (pstring "+") (_pcalc()) (fun c1 _ c2 -> Plus(c1, c2))
                 pval <|> plus
             _pcalc()
         let rec _pbody acceptInnerBody () =
             let ptrueExpr () = stringReturn "true" True
             let pfalseExpr () = stringReturn "false" False
-            let peqExpr () = attempt <| pipe3 (pterm ()) (pstring "=") (pterm ()) (fun a1 _ a2 -> EqExpr(a1, a2))
-            let pgrExpr () = attempt <| pipe3 (pterm ()) (pstring ">") (pterm ()) (fun a1 _ a2 -> GrExpr(a1, a2))
-            let pleExpr () = attempt <| pipe3 (pterm ()) (pstring "<") (pterm ()) (fun a1 _ a2 -> LeExpr(a1, a2))
-            let calcExpr () = attempt <| pipe3 (pterm ()) (pstring "is") (pcalc ()) (fun t _ c -> CalcExpr(t, c))
+            let peqExpr () = attempt <| pipe3 pterm (pstring "=") pterm (fun a1 _ a2 -> EqExpr(a1, a2))
+            let pgrExpr () = attempt <| pipe3 pterm (pstring ">") pterm (fun a1 _ a2 -> GrExpr(a1, a2))
+            let pleExpr () = attempt <| pipe3 pterm (pstring "<") pterm (fun a1 _ a2 -> LeExpr(a1, a2))
+            let calcExpr () = attempt <| pipe3 pterm (pstring "is") (pcalc ()) (fun t _ c -> CalcExpr(t, c))
             let pandExpr () = attempt <| pipe3 (_pbody false ()) (pstring ",") (_pbody false ()) (fun expr1 _ expr2 -> AndExpression(expr1, expr2))
             let porExpr () = attempt <| pipe3 (_pbody false ()) (pstring ";") (_pbody false ()) (fun expr1 _ expr2 -> OrExpression(expr1, expr2))
             let pinnerExpr () = attempt <| (_pbody false ()) >>=? (fun x ->

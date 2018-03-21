@@ -29,16 +29,16 @@ let inline checkFailure x = match x with | Failure(_,_,_) -> () | _ -> Assert.Fa
 [<TestFixture>]
 module PrimsTests =
     [<Test; MemoryReport>]
-    let parseNumTerm() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "23" |> checkSuccess (num 23.)
+    let parseNumTerm() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "23" |> checkSuccess (num 23.)
     
     [<Test; MemoryReport>]
-    let parseListFromSingleNumber() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1]" |> checkSuccess (ListTerm(TypedListTerm(num 1., NilTerm)))
+    let parseListFromSingleNumber() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1]" |> checkSuccess (ListTerm(TypedListTerm(num 1., NilTerm)))
     
     [<Test; MemoryReport>]
-    let parseListFromTwoDifferentTerms() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1,a]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(atom "a", NilTerm))))
+    let parseListFromTwoDifferentTerms() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1,a]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(atom "a", NilTerm))))
     
     [<Test; MemoryReport>]
-    let parseListWithVariableTail() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm()) "[1,2|A]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("A"))))))
+    let parseListWithVariableTail() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1,2|A]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("A"))))))
     
     [<Test; MemoryReport>]
     let parseNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.psignature "a(1)." |> checkSuccess (SIGNATURE "a" [num 1.])
