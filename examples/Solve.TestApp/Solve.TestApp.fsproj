@@ -9,6 +9,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Solve/Solve.fsproj" />
+    <ProjectReference Include="..\..\src\Solve.Parse\Solve.Parse.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

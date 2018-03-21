@@ -1,4 +1,5 @@
 ﻿open Solve
+open Solve.Parse
 
 open System
 
@@ -18,12 +19,12 @@ let readInput mode =
 
     let input = Console.ReadLine()
     match mode with
-    | Insert -> input
-    | Query -> "?- " + input
+    | Insert -> ":-" + input
+    | Query -> "?-" + input
 
 [<EntryPoint>]
 let main argv = 
-    let interactive = Solve.Interactive()
+    let interactive = Solve.Parse.Interactive()
     
     printfn "Choose mode by typing: 'insert' (:-) or 'query' (?-)."
 
@@ -57,7 +58,7 @@ let main argv =
             | ":- insert"
             | "?- insert"
             | "insert" -> mode <- Insert
-            | "> query"
+            | ":- query"
             | "?- query"
             | "query" -> mode <- Query
             | _ ->
