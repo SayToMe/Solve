@@ -32,46 +32,46 @@ module Prims =
     let listBetweenStringsCustom sOpen sClose separatorParser pElement f =
         pipe3 (sOpen .>> ws) (ws >>. sepBy (pElement .>> ws) (separatorParser .>> ws)) (sClose .>> ws) f
 
-    let ptrue () = stringReturn "true"  (TypedTerm <| TypedBoolTerm(BoolTerm(true)))
-    let pfalse () = stringReturn "false" (TypedTerm <| TypedBoolTerm(BoolTerm(false)))
-    let pnil () = stringReturn "[]" (ListTerm <| NilTerm)
-    let pnumber () = pfloat |>> (TypedTerm << TypedNumberTerm << NumberTerm)
-    let pchar () = attempt <| str "'" >>. anyChar .>> str "'" |>> (TypedTerm << TypedCharTerm << CharTerm)
+    let ptrue = stringReturn "true"  (TypedTerm <| TypedBoolTerm(BoolTerm(true)))
+    let pfalse = stringReturn "false" (TypedTerm <| TypedBoolTerm(BoolTerm(false)))
+    let pnil = stringReturn "[]" (ListTerm <| NilTerm)
+    let pnumber = pfloat |>> (TypedTerm << TypedNumberTerm << NumberTerm)
+    let pchar = attempt <| str "'" >>. anyChar .>> str "'" |>> (TypedTerm << TypedCharTerm << CharTerm)
 
-    let patomPlain () =
+    let patomPlain =
         let isIdentifierFirstChar c = isLetter c && not(isUpper c)
         let isIdentifierChar c = isLetter c || isDigit c || c = '_'
     
         many1Satisfy2L isIdentifierFirstChar isIdentifierChar "identifier"
         .>> spaces
-    let patom () =
-        patomPlain ()
+    let patom =
+        patomPlain
         |>> (TypedTerm << TypedAtomTerm << AtomTerm)
-    let pvariablePlain () =
+    let pvariablePlain =
         let isIdentifierFirstChar c = isLetter c && isUpper c
         let isIdentifierChar c = isLetter c || isDigit c || c = '_'
     
         many1Satisfy2L isIdentifierFirstChar isIdentifierChar "identifier"
         .>> spaces
-    let pvariable () =
-        pvariablePlain ()
+    let pvariable =
+        pvariablePlain
         |>> (VariableTerm << Variable)
  
     let pterm () = 
-        let _pterm () = (patom () <|> pvariable () <|> pnumber () <|> pnil () <|> pfalse () <|> ptrue () <|> pchar ())
+        let _pterm () = patom <|> pvariable <|> pnumber <|> pnil <|> pfalse <|> ptrue <|> pchar
         
-        let pstructure () = attempt <| pipe2 (patomPlain ()) (listBetweenStrings "(" ")" (_pterm ()) id) (fun atom terms ->
+        let pstructure () = attempt <| pipe2 patomPlain (listBetweenStrings "(" ")" (_pterm ()) id) (fun atom terms ->
             Structure(atom, terms )) |>> StructureTerm
         let plist () =
-            let pempty () = attempt (pnil ())
+            let pempty () = attempt pnil
             let pnormalList () = attempt <| listBetweenStrings "[" "]" (_pterm ()) (List.rev >> List.fold (fun acc s -> TypedListTerm(s, acc)) NilTerm >> ListTerm)
-            let pvariableList () = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. ws >>. pvariablePlain () .>> ws .>> str "]") (str ",") (_pterm ()) (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
+            let pvariableList () = attempt <| listBetweenStringsCustom (str "[") (str "|" >>. ws >>. pvariablePlain .>> ws .>> str "]") (str ",") (_pterm ()) (fun s terms var -> (VarListTerm(Variable(var)), terms |> List.rev) ||> List.fold (fun acc s -> TypedListTerm(s, acc)) |> ListTerm)
 
             attempt <| (pempty() <|> pnormalList () <|> pvariableList ())
         _pterm () <|> pstructure () <|> plist ()
 
     let psignature =
-        pipe2 (patomPlain ()) (listBetweenStrings "(" ")" (pterm ()) id) (fun atom terms ->
+        pipe2 patomPlain (listBetweenStrings "(" ")" (pterm ()) id) (fun atom terms ->
             Signature(atom, Transformers.toParams terms ))
 
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
