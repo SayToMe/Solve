@@ -39,6 +39,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.TestApp", "examples\S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{DD1C30FE-4364-4D0C-A425-506DC69AFECF}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.Parse", "src\Solve.Parse\Solve.Parse.fsproj", "{39863437-1B0A-46C8-8E8D-103AB5CBC900}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,10 @@ Global
 		{312C2CC4-7E30-48E7-820E-F00BBB7D8B2B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

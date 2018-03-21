@@ -28,6 +28,8 @@ let inline SIGNATURE name terms = Signature(name, toParams terms)
 [<DebuggerStepThrough>]
 let inline RULE signature body = Rule(signature, body)
 [<DebuggerStepThrough>]
+let inline FACT signature = Rule(signature, True)
+[<DebuggerStepThrough>]
 let inline GOAL name terms = CallExpression(GoalSignature(name, toArgs terms))
 
 [<AutoOpen>]

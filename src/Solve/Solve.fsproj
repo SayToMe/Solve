@@ -38,15 +38,11 @@
     <Compile Include="Execute.fs" />
     <None Include="Script.fsx" />
     <Compile Include="Main.fs" />
-    <Compile Include="Parse.fs" />
-    <Compile Include="Interactive.fs" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Remove="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FParsec" Version="1.0.4-RC3" />
     <PackageReference Include="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

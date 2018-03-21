@@ -1,11 +1,13 @@
-﻿namespace Solve
+﻿namespace Solve.Parse
 
+open Solve
 open Rule
 open Rule.Transformers
 open TermTypes
 open FParsec
 
 open Solve.Parse
+open Solve.Parse.Parse
 
 type InteractiveResult =
     | RuleInfo of Rule
