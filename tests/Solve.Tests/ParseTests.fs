@@ -21,7 +21,7 @@ let inline parse str = Solve.Parse.Parse.parsePlString str
 
 let inline checkSuccess x =
     function
-    | Success(r, _, _) -> Assert.AreEqual(r, x)
+    | Success(r, _, _) -> Assert.AreEqual(x, r)
     | Failure(_, _, _) -> Assert.Fail(sprintf "Failure instead of success in expected %A" x)
 
 let inline checkFailure x = match x with | Failure(_,_,_) -> () | _ -> Assert.Fail("Expected fail")
@@ -45,9 +45,12 @@ module PrimsTests =
     
     [<Test; MemoryReport>]
     let parseFactWithNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pfact "a(1)." |> checkSuccess (FACT (SIGNATURE "a" [num 1.]))
-    
+
     [<Test; MemoryReport>]
     let parseEqBodyExpession() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32" |> checkSuccess (EqExpr(atom "a12", atom "b32"))
+
+    [<Test; MemoryReport>]
+    let parseCalcBodyExpession() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "V is 1+2" |> checkSuccess (CalcExpr(var "V", Plus(Value(num 1.), Value(num 2.))))
     
     [<Test; MemoryReport>]
     let parseAndExpressionWithTwoEqs() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32,b32=b33" |> checkSuccess (AndExpression(EqExpr(atom "a12", atom "b32"), EqExpr(atom "b32", atom "b33")))
@@ -62,8 +65,18 @@ module PrimsTests =
         Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2,a1=b2."
         |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a2"), EqExpr(atom "a1", atom "b2"))))
 
+    [<Test; MemoryReport>]
+    let parseRuleWithMultipleAnds() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1."
+        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), EqExpr(atom "a1", atom "a1")))))))))))
+
 [<TestFixture>]
 module ParserTests =
+    let checkParseFailure given =
+        match given with
+        | ParseError _ -> ()
+        | _ -> failwithf "Expected failure but was %A" expected
+
     [<Test; MemoryReport>]
     let parsePlAssertOfFactWithNonEmptySignature() = Solve.Parse.Parse.parsePlString ":-a(1)." |> check (RuleParseResult(FACT <| SIGNATURE "a" [num 1.]))
     
@@ -99,3 +112,8 @@ module ParserTests =
     let checkPartlyDefinedListParse() =
         parse "?-list([1|X])."
         |> check (CallParseResult(GOAL "list" [ListTerm(TypedListTerm(num 1., VarListTerm(Variable("X"))))]))
+
+    [<Test; MemoryReport>]
+    let checkFailQuery() =
+        parse "?-lli(()."
+        |> checkParseFailure

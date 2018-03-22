@@ -77,32 +77,37 @@ module Prims =
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
     let pbody =
-        let pcalc () =
-            let rec _pcalc() =
-                let pval = pterm |>> Value
-                let plus = pipe3 (_pcalc()) (pstring "+") (_pcalc()) (fun c1 _ c2 -> Plus(c1, c2))
-                pval <|> plus
-            _pcalc()
-        let rec _pbody acceptInnerBody () =
+        let maxDepth = 5
+        let pcalc =
+            let rec _pcalc depth =
+                let nextDepth = depth + 1
+                let pval = attempt <| pterm |>> Value
+                let plus () = attempt <| pval >>=? (fun x -> pstring "+" .>> ws >>. _pcalc nextDepth |>> (fun y -> Plus(x, y)))
+                
+                if depth < maxDepth then
+                    plus () <|> pval
+                else
+                    pval
+            _pcalc 1
+        let rec _pbody () =
             let ptrueExpr = stringReturn "true" True
             let pfalseExpr = stringReturn "false" False
             let peqExpr = attempt <| pipe3 pterm (pstring "=") pterm (fun a1 _ a2 -> EqExpr(a1, a2))
             let pgrExpr = attempt <| pipe3 pterm (pstring ">") pterm (fun a1 _ a2 -> GrExpr(a1, a2))
             let pleExpr = attempt <| pipe3 pterm (pstring "<") pterm (fun a1 _ a2 -> LeExpr(a1, a2))
-            let calcExpr () = attempt <| pipe3 pterm (pstring "is") (pcalc ()) (fun t _ c -> CalcExpr(t, c))
-            let pandExpr () = attempt <| pipe3 (_pbody false ()) (pstring ",") (_pbody false ()) (fun expr1 _ expr2 -> AndExpression(expr1, expr2))
-            let porExpr () = attempt <| pipe3 (_pbody false ()) (pstring ";") (_pbody false ()) (fun expr1 _ expr2 -> OrExpression(expr1, expr2))
-            let pinnerExpr () = attempt <| (_pbody false ()) >>=? (fun x ->
-                    ((pstring ",") >>? _pbody true () |>> (fun y -> AndExpression(x, y)))
-                    <|>
-                    ((pstring ";") >>? _pbody true () |>> (fun y -> OrExpression(x, y)))
-                )
-            
-            if acceptInnerBody then
-                pinnerExpr () <|> ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr
-            else
-                ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr
-        attempt <| _pbody true()
+            let calcExpr () = attempt <| pipe3 (pterm .>> ws) (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c))
+
+            let singleExpression = ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr ()
+
+            let pinnerExpr () = attempt <| singleExpression >>=? (fun x ->
+                ((pstring ",") >>? _pbody () |>> (fun y -> AndExpression(x, y)))
+                <|>
+                ((pstring ";") >>? _pbody () |>> (fun y -> OrExpression(x, y)))
+            )
+
+            pinnerExpr () <|> singleExpression
+
+        attempt <| _pbody ()
     
     let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) pbody (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
