@@ -32,6 +32,9 @@ module PrimsTests =
     let parseNumTerm() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "23" |> checkSuccess (num 23.)
     
     [<Test; MemoryReport>]
+    let parseNumTermWithDot() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm .>> pstring ".") "23." |> checkSuccess (num 23.)
+    
+    [<Test; MemoryReport>]
     let parseListFromSingleNumber() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1]" |> checkSuccess (ListTerm(TypedListTerm(num 1., NilTerm)))
     
     [<Test; MemoryReport>]
@@ -54,7 +57,12 @@ module PrimsTests =
     
     [<Test; MemoryReport>]
     let parseAndExpressionWithTwoEqs() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32,b32=b33" |> checkSuccess (AndExpression(EqExpr(atom "a12", atom "b32"), EqExpr(atom "b32", atom "b33")))
-    
+
+    [<Test; MemoryReport>]
+    let parseRuleWithEqExpressionAndEmptySignature() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():-a1=a2."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (EqExpr(atom "a1", atom "a2")))
+
     [<Test; MemoryReport>]
     let parseRuleWithEqExpressionAndNonEmptySignature() = 
         Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2."
@@ -69,6 +77,21 @@ module PrimsTests =
     let parseRuleWithMultipleAnds() = 
         Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1."
         |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), EqExpr(atom "a1", atom "a1")))))))))))
+
+    [<Test; MemoryReport>]
+    let parseRuleWithOneValueCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 1."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Value(num 1.))))
+
+    [<Test; MemoryReport>]
+    let parseRuleWithPlusCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a1(12):-X is 1+1."
+        |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Value(num 1.)))))
+
+    [<Test; MemoryReport>]
+    let parseRuleWithMultipleAddsCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a1(12):-X is 1+1+1+1."
+        |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Plus(Value(num 1.), Plus(Value(num 1.), Value(num 1.)))))))
 
 [<TestFixture>]
 module ParserTests =

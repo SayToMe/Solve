@@ -20,9 +20,14 @@ module Prims =
 
     let (<!>) (p: Parser<_,_>) label : Parser<_,_> =
         fun stream ->
+            let initialPosition = stream.Position
+            let initToken = stream.IndexToken
             printfn "%A: Entering %s" stream.Position label
             let reply = p stream
-            printfn "%A: Leaving %s (%A). Res: %A" stream.Position label reply.Status (reply.Result)
+            let resPosition = stream.Position
+            stream.Seek initToken
+            let str = stream.ReadCharsOrNewlines(int <| resPosition.Index - initialPosition.Index, false)
+            printfn "%A: Leaving %s (%A). Res: %A, Catched (%A)" stream.Position label reply.Status (reply.Result) (str)
             reply
 
     let listBetweenStrings sOpen sClose pElement f =
@@ -35,7 +40,7 @@ module Prims =
     let ptrue = stringReturn "true"  (TypedTerm <| TypedBoolTerm(BoolTerm(true)))
     let pfalse = stringReturn "false" (TypedTerm <| TypedBoolTerm(BoolTerm(false)))
     let pnil = stringReturn "[]" (ListTerm <| NilTerm)
-    let pnumber = pfloat |>> (TypedTerm << TypedNumberTerm << NumberTerm)
+    let pnumber = pint32 |>> (TypedTerm << TypedNumberTerm << NumberTerm << float)
     let pchar = attempt <| str "'" >>. anyChar .>> str "'" |>> (TypedTerm << TypedCharTerm << CharTerm)
 
     let patomPlain =
@@ -77,25 +82,19 @@ module Prims =
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
     let pbody =
-        let maxDepth = 5
         let pcalc =
-            let rec _pcalc depth =
-                let nextDepth = depth + 1
-                let pval = attempt <| pterm |>> Value
-                let plus () = attempt <| pval >>=? (fun x -> pstring "+" .>> ws >>. _pcalc nextDepth |>> (fun y -> Plus(x, y)))
-                
-                if depth < maxDepth then
-                    plus () <|> pval
-                else
-                    pval
-            _pcalc 1
+            let rec _pcalc () =
+                let pval = attempt <| (pterm .>> ws) |>> Value
+                let plus () = attempt <| (pval >>=? (fun x -> attempt <| (pstring "+" .>> ws >>. _pcalc ()) |>> (fun y -> Plus(x, y))))
+                plus () <|> pval
+            attempt <| _pcalc ()
         let rec _pbody () =
             let ptrueExpr = stringReturn "true" True
             let pfalseExpr = stringReturn "false" False
             let peqExpr = attempt <| pipe3 pterm (pstring "=") pterm (fun a1 _ a2 -> EqExpr(a1, a2))
             let pgrExpr = attempt <| pipe3 pterm (pstring ">") pterm (fun a1 _ a2 -> GrExpr(a1, a2))
             let pleExpr = attempt <| pipe3 pterm (pstring "<") pterm (fun a1 _ a2 -> LeExpr(a1, a2))
-            let calcExpr () = attempt <| pipe3 (pterm .>> ws) (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c))
+            let calcExpr () = (attempt <| pipe3 (pterm .>> ws) (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c)))
 
             let singleExpression = ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr ()
 
@@ -109,7 +108,7 @@ module Prims =
 
         attempt <| _pbody ()
     
-    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) pbody (pstring ".") (fun signature _ body _ -> Rule(signature, body))
+    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) (pbody .>> ws) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
     let pdef = (pstring ":-" .>> ws) >>. (pfact <|> prule) |>> RuleParseResult
 
