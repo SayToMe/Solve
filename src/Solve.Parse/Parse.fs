@@ -85,8 +85,17 @@ module Prims =
         let pcalc =
             let rec _pcalc () =
                 let pval = attempt <| (pterm .>> ws) |>> Value
-                let plus () = attempt <| (pval >>=? (fun x -> attempt <| (pstring "+" .>> ws >>. _pcalc ()) |>> (fun y -> Plus(x, y))))
-                plus () <|> pval
+                let rec pinnerCalc () =
+                    attempt <| (pval >>=? (fun x ->
+                        (attempt <| (pstring "+" .>> ws >>. _pcalc ()) |>> (fun y -> Plus(x, y)))
+                        <|>
+                        (attempt <| (pstring "-" .>> ws >>. _pcalc ()) |>> (fun y -> Subsctruct(x, y)))
+                        <|>
+                        (attempt <| (pstring "*" .>> ws >>. _pcalc ()) |>> (fun y -> Multiply(x, y)))
+                        <|>
+                        (attempt <| (pstring "/" .>> ws >>. _pcalc ()) |>> (fun y -> Division(x, y)))
+                    ))
+                pinnerCalc () <|> pval
             attempt <| _pcalc ()
         let rec _pbody () =
             let ptrueExpr = stringReturn "true" True

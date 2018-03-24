@@ -89,6 +89,21 @@ module PrimsTests =
         |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Value(num 1.)))))
 
     [<Test; MemoryReport>]
+    let parseRuleWithSubstructCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 - 1."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Subsctruct(Value(num 2.), Value(num 1.)))))
+
+    [<Test; MemoryReport>]
+    let parseRuleWithMultiplyCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 * 1."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Multiply(Value(num 2.), Value(num 1.)))))
+
+    [<Test; MemoryReport>]
+    let parseRuleWithDivisionCalc() = 
+        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 / 1."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Division(Value(num 2.), Value(num 1.)))))
+        
+    [<Test; MemoryReport>]
     let parseRuleWithMultipleAddsCalc() = 
         Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a1(12):-X is 1+1+1+1."
         |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Plus(Value(num 1.), Plus(Value(num 1.), Value(num 1.)))))))
