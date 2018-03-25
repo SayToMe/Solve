@@ -1,119 +1,22 @@
-﻿module Solve.ParseTests
+﻿module Solve.InteractiveTests
 
 open Solve.Tests
 
 open NUnit.Framework
-open System.Diagnostics
 
-open Solve
 open Solve.TermTypes
-
-open TermTypes.Transformers
-
-open Rule
-open Rule.Transformers
-
+open Solve.TermTypes.Transformers
+open Solve.Rule
 open Solve.Parse
 
-open FParsec
-
-let inline parse str = Solve.Parse.Parse.parsePlString str
-
-let inline checkSuccess x =
-    function
-    | Success(r, _, _) -> Assert.AreEqual(x, r)
-    | Failure(_, _, _) -> Assert.Fail(sprintf "Failure instead of success in expected %A" x)
-
-let inline checkFailure x = match x with | Failure(_,_,_) -> () | _ -> Assert.Fail("Expected fail")
-
-[<TestFixture>]
-module PrimsTests =
-    [<Test; MemoryReport>]
-    let parseNumTerm() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "23" |> checkSuccess (num 23.)
-    
-    [<Test; MemoryReport>]
-    let parseNumTermWithDot() = Solve.Parse.Parse.testRun (Solve.Parse.Prims.pterm .>> pstring ".") "23." |> checkSuccess (num 23.)
-    
-    [<Test; MemoryReport>]
-    let parseListFromSingleNumber() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1]" |> checkSuccess (ListTerm(TypedListTerm(num 1., NilTerm)))
-    
-    [<Test; MemoryReport>]
-    let parseListFromTwoDifferentTerms() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1,a]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(atom "a", NilTerm))))
-    
-    [<Test; MemoryReport>]
-    let parseListWithVariableTail() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pterm "[1,2|A]" |> checkSuccess (ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., VarListTerm(Variable("A"))))))
-    
-    [<Test; MemoryReport>]
-    let parseNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.psignature "a(1)." |> checkSuccess (SIGNATURE "a" [num 1.])
-    
-    [<Test; MemoryReport>]
-    let parseFactWithNonEmptySignature() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pfact "a(1)." |> checkSuccess (FACT (SIGNATURE "a" [num 1.]))
-
-    [<Test; MemoryReport>]
-    let parseEqBodyExpession() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32" |> checkSuccess (EqExpr(atom "a12", atom "b32"))
-
-    [<Test; MemoryReport>]
-    let parseCalcBodyExpession() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "V is 1+2" |> checkSuccess (CalcExpr(var "V", Plus(Value(num 1.), Value(num 2.))))
-    
-    [<Test; MemoryReport>]
-    let parseAndExpressionWithTwoEqs() = Solve.Parse.Parse.testRun Solve.Parse.Prims.pbody "a12=b32,b32=b33" |> checkSuccess (AndExpression(EqExpr(atom "a12", atom "b32"), EqExpr(atom "b32", atom "b33")))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithEqExpressionAndEmptySignature() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():-a1=a2."
-        |> checkSuccess (RULE (SIGNATURE "a" []) (EqExpr(atom "a1", atom "a2")))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithEqExpressionAndNonEmptySignature() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2."
-        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (EqExpr(atom "a1", atom "a2")))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithAndExpressionAndNonEmptySiganture() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a2,a1=b2."
-        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a2"), EqExpr(atom "a1", atom "b2"))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithMultipleAnds() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a12(12):-a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1,a1=a1."
-        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), AndExpression(EqExpr(atom "a1", atom "a1"), EqExpr(atom "a1", atom "a1")))))))))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithOneValueCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 1."
-        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Value(num 1.))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithPlusCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a1(12):-X is 1+1."
-        |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Value(num 1.)))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithSubstructCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 - 1."
-        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Subsctruct(Value(num 2.), Value(num 1.)))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithMultiplyCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 * 1."
-        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Multiply(Value(num 2.), Value(num 1.)))))
-
-    [<Test; MemoryReport>]
-    let parseRuleWithDivisionCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a():- X is 2 / 1."
-        |> checkSuccess (RULE (SIGNATURE "a" []) (CalcExpr(var "X", Division(Value(num 2.), Value(num 1.)))))
-        
-    [<Test; MemoryReport>]
-    let parseRuleWithMultipleAddsCalc() = 
-        Solve.Parse.Parse.testRun Solve.Parse.Prims.prule "a1(12):-X is 1+1+1+1."
-        |> checkSuccess (RULE (SIGNATURE "a1" [num 12.]) (CalcExpr(var "X", Plus(Value(num 1.), Plus(Value(num 1.), Plus(Value(num 1.), Value(num 1.)))))))
+open Solve.PrimitivesTests
 
 [<TestFixture>]
 module ParserTests =
     let checkParseFailure given =
         match given with
         | ParseError _ -> ()
-        | _ -> failwithf "Expected failure but was %A" expected
+        | _ -> failwithf "Expected failure but was %A" given
 
     [<Test; MemoryReport>]
     let parsePlAssertOfFactWithNonEmptySignature() = Solve.Parse.Parse.parsePlString ":-a(1)." |> check (RuleParseResult(FACT <| SIGNATURE "a" [num 1.]))
@@ -155,3 +58,32 @@ module ParserTests =
     let checkFailQuery() =
         parse "?-lli(()."
         |> checkParseFailure
+    
+    [<Test; MemoryReport>]
+    let parseFacts() =
+         parse "fact(1)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [num 1.]) True))
+         parse "fact(2)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [num 2.]) True))
+         parse "fact(X)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [var "X"]) True))
+         parse "fact(Y)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [var "Y"]) True))
+         parse "fact(x)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [atom "x"]) True))
+         parse "fact(y)." |> check (RuleParseResult(RULE(SIGNATURE "fact" [atom "y"]) True))
+
+    [<Test; MemoryReport>]
+    let parseEqGrLeRule() =
+         parse "rule(X) :- X = 1." |> check (RuleParseResult(RULE(SIGNATURE "rule" [var "X"]) (EqExpr(var "X", num 1.))))
+         parse "rule(X) :- X > 1." |> check (RuleParseResult(RULE(SIGNATURE "rule" [var "X"]) (GrExpr(var "X", num 1.))))
+         parse "rule(X) :- X < 1." |> check (RuleParseResult(RULE(SIGNATURE "rule" [var "X"]) (LeExpr(var "X", num 1.))))
+    
+    [<Test; MemoryReport>]
+    let parseAndRule() =
+         parse "rule(X, Y) :- X = 1, Y = 2." |> check (RuleParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (AndExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
+    
+    [<Test; MemoryReport>]
+    let parseOrRule() =
+         parse "rule(X, Y) :- X = 1 ; Y = 2." |> check (RuleParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (OrExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
+
+    [<Test; MemoryReport>]
+    let parseFactorialRule() =
+         parse "factorial(1,1)." |> check (RuleParseResult(RULE(SIGNATURE "factorial" [num 1.; num 1.]) True))
+
+         parse "factorial(X,Y) :- X > 1, X1 is X - 1, factorial(X1, Y1), Y is X * Y1." |> check (RuleParseResult(RULE (SIGNATURE "factorial" [var "X"; var "Y"]) (AndExpression(GrExpr(var "X", num 1.), AndExpression(CalcExpr(var "X1", Subsctruct(Value(var "X"), Value(num 1.))), AndExpression(GOAL "factorial" [var "X1"; var "Y1"], CalcExpr(var "Y", Multiply(Value(var "X"), Value(var "Y1")))))))))

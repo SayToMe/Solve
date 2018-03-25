@@ -7,8 +7,8 @@
   <ItemGroup>
     <None Include="paket.references" />
     <Compile Include="Tests.fs" />
+    <Compile Include="ParsePrimitivesTests.fs" />
     <Compile Include="ParseTests.fs" />
-    <None Include="InteractiveTests.fs" />
     <None Include="Script.fsx" />
     <Compile Include="Program.fs" />
   </ItemGroup>
