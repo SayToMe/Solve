@@ -78,6 +78,7 @@ module Primitives =
     let psignature =
         pipe2 patomPlain (listBetweenStrings "(" ")" pterm id) (fun atom terms ->
             Signature(atom, Transformers.toParams terms ))
+        .>> ws
 
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
@@ -100,27 +101,28 @@ module Primitives =
         let rec _pbody () =
             let ptrueExpr = stringReturn "true" True
             let pfalseExpr = stringReturn "false" False
-            let peqExpr = attempt <| pipe3 pterm (pstring "=") pterm (fun a1 _ a2 -> EqExpr(a1, a2))
-            let pgrExpr = attempt <| pipe3 pterm (pstring ">") pterm (fun a1 _ a2 -> GrExpr(a1, a2))
-            let pleExpr = attempt <| pipe3 pterm (pstring "<") pterm (fun a1 _ a2 -> LeExpr(a1, a2))
-            let calcExpr () = (attempt <| pipe3 (pterm .>> ws) (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c)))
+            let peqExpr = attempt <| pipe3 pterm (pstring "=" .>> ws) pterm (fun a1 _ a2 -> EqExpr(a1, a2))
+            let pgrExpr = attempt <| pipe3 pterm (pstring ">" .>> ws) pterm (fun a1 _ a2 -> GrExpr(a1, a2))
+            let pleExpr = attempt <| pipe3 pterm (pstring "<" .>> ws) pterm (fun a1 _ a2 -> LeExpr(a1, a2))
+            let calcExpr () = (attempt <| pipe3 pterm (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c)))
+            let pcallExpr () = attempt <| (psignature |>> (fun (Signature(name, parameters)) -> CallExpression(GoalSignature(name, parameters |> fromParams |> toArgs))))
 
-            let singleExpression = ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr ()
+            let singleExpression = (ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr () <|> pcallExpr ()) .>> ws
 
-            let pinnerExpr () = attempt <| singleExpression >>=? (fun x ->
-                ((pstring ",") >>? _pbody () |>> (fun y -> AndExpression(x, y)))
+            let pinnerExpr () = attempt <| (singleExpression >>=? (fun x ->
+                ((pstring "," .>> ws) >>? _pbody () |>> (fun y -> AndExpression(x, y)))
                 <|>
-                ((pstring ";") >>? _pbody () |>> (fun y -> OrExpression(x, y)))
-            )
+                ((pstring ";" .>> ws) >>? _pbody () |>> (fun y -> OrExpression(x, y)))
+            ) .>> ws)
 
-            pinnerExpr () <|> singleExpression
+            (pinnerExpr () <|> singleExpression)
 
-        attempt <| _pbody ()
+        attempt <| (_pbody () .>> ws)
     
-    let prule = pipe4 (psignature .>> ws) (pstring ":-" .>> ws) (pbody .>> ws) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
+    let prule = pipe4 psignature (pstring ":-" .>> ws) (pbody .>> ws) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
-    let pdef = (pstring ":-" .>> ws) >>. (pfact <|> prule) |>> RuleParseResult
+    let pdef = (pstring ":-" .>> ws) >>. (attempt pfact <|> attempt prule) |>> RuleParseResult
 
     let pquery = (pstring "?-" .>> ws) >>. psignature .>> (pstring ".") |>> (fun (Signature(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs <| fromParams l))))
 
-    let pcommand: Parser<ParseResult, unit> = pquery <|> pdef
+    let pcommand: Parser<ParseResult, unit> = (attempt pquery) <|> (attempt pdef)

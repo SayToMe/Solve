@@ -22,7 +22,7 @@ let inline parse str = Solve.Parse.Parse.parsePlString str
 let inline checkSuccess x =
     function
     | Success(r, _, _) -> Assert.AreEqual(x, r)
-    | Failure(_, _, _) -> Assert.Fail(sprintf "Failure instead of success in expected %A" x)
+    | Failure(_, err, _) -> Assert.Fail(sprintf "Failure instead of success in expected %A. Message %A" x err)
 
 let inline checkFailure x = match x with | Failure(_,_,_) -> () | _ -> Assert.Fail("Expected fail")
 
@@ -67,13 +67,13 @@ module PrimitivesTests =
 
     [<Test; MemoryReport>]
     let parseRuleWithEqExpressionAndNonEmptySignature() = 
-        Solve.Parse.Parse.testRun prule "a12(12):-a1=a2."
-        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (EqExpr(atom "a1", atom "a2")))
+        Solve.Parse.Parse.testRun prule "a():- a1 = a2."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (EqExpr(atom "a1", atom "a2")))
 
     [<Test; MemoryReport>]
     let parseRuleWithAndExpressionAndNonEmptySiganture() = 
-        Solve.Parse.Parse.testRun prule "a12(12):-a1=a2,a1=b2."
-        |> checkSuccess (RULE (SIGNATURE "a12" [num 12.]) (AndExpression(EqExpr(atom "a1", atom "a2"), EqExpr(atom "a1", atom "b2"))))
+        Solve.Parse.Parse.testRun prule "a():-a1=a2, b1=b2."
+        |> checkSuccess (RULE (SIGNATURE "a" []) (AndExpression(EqExpr(atom "a1", atom "a2"), EqExpr(atom "b1", atom "b2"))))
 
     [<Test; MemoryReport>]
     let parseRuleWithMultipleAnds() = 
