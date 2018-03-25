@@ -135,6 +135,13 @@ Target "Clean" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
+// Restore nuget
+
+Target "Restore" (fun _ ->
+    DotNetCli.Restore(fun x -> x) |> ignore
+)
+
+// --------------------------------------------------------------------------------------
 // Build library & test project
 
 Target "Build" (fun _ ->
@@ -350,6 +357,7 @@ Target "BuildPackage" DoNothing
 Target "All" DoNothing
 
 "AssemblyInfo"
+  ==> "Restore"
   ==> "Build"
   ==> "CopyBinaries"
   ==> "RunTests"
