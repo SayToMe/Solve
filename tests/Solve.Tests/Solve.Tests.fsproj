@@ -14,7 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Solve/Solve.fsproj" />
-    <ProjectReference Include="..\..\src\Solve.Parse\Solve.Parse.fsproj" />
+    <ProjectReference Include="../../src/Solve.PrologParser/Solve.PrologParser.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.0.4-RC3" />
@@ -23,5 +23,5 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.6.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.9.0" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  <Import Project="../../.paket/Paket.Restore.targets" />
 </Project>

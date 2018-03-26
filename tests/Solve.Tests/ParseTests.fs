@@ -8,7 +8,12 @@ open Solve.TermTypes
 open Solve.TermTypes.Transformers
 open Solve.Rule
 open Solve.Rule.Transformers
-open Solve.Parse
+
+open FParsec
+
+open Solve.PrologParser
+open Solve.PrologParser.Primitives
+open Solve.PrologParser.Parser
 
 open Solve.PrimitivesTests
 
@@ -20,10 +25,10 @@ module ParserTests =
         | _ -> failwithf "Expected failure but was %A" given
 
     [<Test; MemoryReport>]
-    let parsePlAssertOfFactWithNonEmptySignature() = Solve.Parse.Parse.parsePlString ":-a(1)." |> check (RuleParseResult(FACT <| SIGNATURE "a" [num 1.]))
+    let parsePlAssertOfFactWithNonEmptySignature() = parsePlString ":-a(1)." |> check (RuleParseResult(FACT <| SIGNATURE "a" [num 1.]))
     
     [<Test; MemoryReport>]
-    let parsePlQueryForNonEmptySignature() = Solve.Parse.Parse.parsePlString "?-a(1)." |> check (CallParseResult(GOAL "a" [num 1.]))
+    let parsePlQueryForNonEmptySignature() = parsePlString "?-a(1)." |> check (CallParseResult(GOAL "a" [num 1.]))
     
     [<Test; MemoryReport>]
     let checkNoParamsFactParse() =

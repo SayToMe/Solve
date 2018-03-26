@@ -1,4 +1,4 @@
-﻿namespace Solve.Parse
+﻿namespace Solve.PrologParser
 
 open Solve
 open Solve.Rule.Transformers

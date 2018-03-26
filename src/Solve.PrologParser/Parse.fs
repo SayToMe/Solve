@@ -1,10 +1,10 @@
-﻿namespace Solve.Parse
+﻿namespace Solve.PrologParser
 
 open FParsec
 
-open Solve.Parse.Primitives
+open Solve.PrologParser.Primitives
 
-module Parse =
+module Parser =
     let convertResult = function
        | Success(r, _, _) -> r
        | Failure(e, _, _) -> ParseError e

@@ -39,7 +39,7 @@ Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.TestApp", "examples\S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{DD1C30FE-4364-4D0C-A425-506DC69AFECF}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.Parse", "src\Solve.Parse\Solve.Parse.fsproj", "{39863437-1B0A-46C8-8E8D-103AB5CBC900}"
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.PrologParser", "src\Solve.PrologParser\Solve.PrologParser.fsproj", "{39863437-1B0A-46C8-8E8D-103AB5CBC900}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

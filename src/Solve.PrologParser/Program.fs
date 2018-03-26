@@ -2,7 +2,7 @@
 
 let inline parse str = 
     printfn "Parsing: %A" str
-    Solve.Parse.Parse.parsePlString str
+    Solve.PrologParser.Parser.parsePlString str
 
 [<EntryPoint>]
 let main argv =

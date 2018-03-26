@@ -6,8 +6,9 @@ open Rule.Transformers
 open TermTypes
 open FParsec
 
-open Solve.Parse
-open Solve.Parse.Parse
+open Solve.PrologParser
+open Solve.PrologParser.Primitives
+open Solve.PrologParser.Parser
 
 type InteractiveResult =
     | RuleInfo of Rule
