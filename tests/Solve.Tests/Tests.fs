@@ -28,6 +28,8 @@ let inline SIGNATURE name terms = Signature(name, toParams terms)
 [<DebuggerStepThrough>]
 let inline RULE signature body = Rule(signature, body)
 [<DebuggerStepThrough>]
+let inline FACT signature = Rule(signature, True)
+[<DebuggerStepThrough>]
 let inline GOAL name terms = CallExpression(GoalSignature(name, toArgs terms))
 
 [<AutoOpen>]
@@ -66,23 +68,28 @@ module NUnitExtensions =
         
         let trackedGcCollections = [0..2]
 
+        let totalAllocatedMemorySize() =
+            // AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            0L
+
         override __.Targets = ActionTargets.Test
 
         override __.BeforeTest test =
             try
-                System.AppDomain.MonitoringIsEnabled <- true
+                // System.AppDomain.MonitoringIsEnabled <- true
+                ()
             with
             | _ -> ()
 
             _timer.Start()
             GC.Collect()
-            _gcmem <- AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            _gcmem <- totalAllocatedMemorySize()
             // gc executes one or zero times after starting no gc region on a different systems
             _gc <- trackedGcCollections |> List.map (fun i -> GC.CollectionCount(i) + 1)
 
         override __.AfterTest test = 
             _timer.Stop()
-            let gcm = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize
+            let gcm = totalAllocatedMemorySize()
             
             let gcCollects =
                 trackedGcCollections
@@ -480,56 +487,3 @@ module ListTests =
     let ``test var list unification with var list``() =
         solve (GOAL "un" [ListTerm(TypedListTerm(VariableTerm(Variable("X")), NilTerm))]) [RULE(SIGNATURE "un" [ListTerm(TypedListTerm(VariableTerm(Variable("Y")), NilTerm))]) True]
         |> checkSolve [[]]
-
-open Solve.Parse
-open PrologParser
-
-[<TestFixture>]
-module ParserTests =
-    [<Test; MemoryReport>]
-    let checkEmptyListParse() =
-        parse "?- list([])."
-        |> check (Some(CallParseResult(GOAL "list" [ListTerm(NilTerm)])))
-        
-    [<Test; MemoryReport>]
-    let checkDefinedListParse() =
-        parse "?- list([1,2,3])."
-        |> check (Some(CallParseResult(GOAL "list" [ListTerm(TypedListTerm(num 1., TypedListTerm(num 2., TypedListTerm(num 3., NilTerm))))])))
-
-    [<Test; MemoryReport>]
-    let checkPartlyDefinedListParse() =
-        parse "?- list([1 | X])."
-        |> check (Some(CallParseResult(GOAL "list" [ListTerm(TypedListTerm(num 1., VarListTerm(Variable("X"))))])))
-
-[<TestFixture>]
-module InteractiveTests =
-    let interactive = Solve.Interactive()
-
-    [<Test; MemoryReport>]
-    let parseFacts() =
-        interactive.NewInput "fact(1)." |> check (RuleInfo(RULE(SIGNATURE "fact" [num 1.]) True))
-        interactive.NewInput "fact(2)." |> check (RuleInfo(RULE(SIGNATURE "fact" [num 2.]) True))
-        interactive.NewInput "fact(X)." |> check (RuleInfo(RULE(SIGNATURE "fact" [var "X"]) True))
-        interactive.NewInput "fact(Y)." |> check (RuleInfo(RULE(SIGNATURE "fact" [var "Y"]) True))
-        interactive.NewInput "fact(x)." |> check (RuleInfo(RULE(SIGNATURE "fact" [atom "x"]) True))
-        interactive.NewInput "fact(y)." |> check (RuleInfo(RULE(SIGNATURE "fact" [atom "y"]) True))
-
-    [<Test; MemoryReport>]
-    let parseEqGrLeRule() =
-        interactive.NewInput "rule(X) :- X = 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (EqExpr(var "X", num 1.))))
-        interactive.NewInput "rule(X) :- X > 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (GrExpr(var "X", num 1.))))
-        interactive.NewInput "rule(X) :- X < 1." |> check (RuleInfo(RULE(SIGNATURE "rule" [var "X"]) (LeExpr(var "X", num 1.))))
-    
-    [<Test; MemoryReport>]
-    let parseAndRule() =
-        interactive.NewInput "rule(X, Y) :- X = 1, Y = 2." |> check (RuleInfo(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (AndExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
-    
-    [<Test; MemoryReport>]
-    let parseOrRule() =
-        interactive.NewInput "rule(X, Y) :- X = 1 ; Y = 2." |> check (RuleInfo(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (OrExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
-
-    [<Test; MemoryReport>]
-    let parseFactorialRule() =
-        interactive.NewInput "factorial(1,1)." |> check (RuleInfo(RULE(SIGNATURE "factorial" [num 1.; num 1.]) True))
-
-        interactive.NewInput "factorial(X,Y) :- X > 1, X1 is X - 1, factorial(X1, Y1), Y is X * Y1." |> check (RuleInfo(RULE (SIGNATURE "factorial" [var "X"; var "Y"]) (AndExpression(GrExpr(var "X", num 1.), AndExpression(CalcExpr(var "X1", Subsctruct(Value(var "X"), Value(num 1.))), AndExpression(GOAL "factorial" [var "X1"; var "Y1"], CalcExpr(var "Y", Multiply(Value(var "X"), Value(var "Y1")))))))))

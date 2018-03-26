@@ -1,4 +1,5 @@
 ﻿open Solve
+open Solve.Parse
 
 open System
 
@@ -13,19 +14,19 @@ let deletePrevConsoleLine() =
         
 let readInput mode =
     match mode with
-    | Insert -> printf "> "
-    | Query -> printf "?- "
+    | Insert -> printf ":-"
+    | Query -> printf "?-"
 
     let input = Console.ReadLine()
     match mode with
-    | Insert -> input
-    | Query -> "?- " + input
+    | Insert -> ":-" + input
+    | Query -> "?-" + input
 
 [<EntryPoint>]
 let main argv = 
-    let interactive = Solve.Interactive()
+    let interactive = Solve.Parse.Interactive()
     
-    printfn "Choose mode by typing: 'insert' (>) or 'query' (?-)."
+    printfn "Choose mode by typing: 'insert' (:-) or 'query' (?-)."
 
     let mutable mode = Insert
     let mutable input = readInput mode
@@ -50,14 +51,14 @@ let main argv =
     while input <> "exit" do
         try
             match input with
-            | "> exit"
+            | ":- exit"
             | "?- exit"
             | "exit"
 
-            | "> insert"
+            | ":- insert"
             | "?- insert"
             | "insert" -> mode <- Insert
-            | "> query"
+            | ":- query"
             | "?- query"
             | "query" -> mode <- Query
             | _ ->

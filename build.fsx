@@ -48,7 +48,10 @@ let solutionFile  = "Solve.sln"
 let configuration = "Release"
 
 // Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "tests/**/bin" </> configuration </> "*Tests*.dll"
+let testAssembly = "tests/Solve.Tests"
+
+// Default test framework
+let testFramework = "netcoreapp2.0"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -132,6 +135,13 @@ Target "Clean" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
+// Restore nuget
+
+Target "Restore" (fun _ ->
+    DotNetCli.Restore(fun x -> x) |> ignore
+)
+
+// --------------------------------------------------------------------------------------
 // Build library & test project
 
 Target "Build" (fun _ ->
@@ -144,14 +154,14 @@ Target "Build" (fun _ ->
 // Run the unit tests using test runner
 
 Target "RunTests" (fun _ ->
-    !! testAssemblies
-    |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            OutputFile = "TestResults.xml" })
+    DotNetCli.Test(fun p ->
+            { p with
+                TimeOut = TimeSpan.FromMinutes 20.
+                Framework = testFramework
+                Project = testAssembly
+            }
+        )
 )
-
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
@@ -347,6 +357,7 @@ Target "BuildPackage" DoNothing
 Target "All" DoNothing
 
 "AssemblyInfo"
+  ==> "Restore"
   ==> "Build"
   ==> "CopyBinaries"
   ==> "RunTests"
