@@ -45,8 +45,11 @@ module VariableUnify =
                 | _ -> None
             | _ -> None
         
-        let prms = List.map2 (fun (Parameter(p)) (Argument(a)) -> unifyRightToConcreteLeft p a) parameters arguments
-        if List.exists Option.isNone prms then
-            None
-        else
-            Some <| List.map Option.get prms
+        if parameters.Length = arguments.Length then
+            let prms = List.map2 (fun (Parameter(p)) (Argument(a)) -> unifyRightToConcreteLeft p a) parameters arguments
+            if List.exists Option.isNone prms then
+                None
+            else
+                Some <| List.map Option.get prms
+         else
+             None

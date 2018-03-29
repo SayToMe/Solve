@@ -17,8 +17,8 @@ module Solve =
     let rec solve (goal: Expression) (knowledgeBase: Rule list) =
         let rec executeCustom (goal: GoalSignature) =
             knowledgeBase
-            |> List.filter (checkAppliable goal)
             |> List.toSeq
+            |> Seq.filter (checkAppliable goal)
             |> Seq.collect (fun rule ->
                 let (GoalSignature(_, initialArgs)) = goal
                 let (Rule(Signature(_, prms), body)) = Option.get (unifyRule rule initialArgs)
