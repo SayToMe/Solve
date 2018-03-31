@@ -7,7 +7,7 @@ open Rule
 module VariableUnify =
     let private changeIfVariable (changeVariable: Variable -> Term) =
         function
-        | VariableTerm(v) -> changeVariable v
+        | VariableTerm(variable) -> changeVariable variable
         | term -> term
         
     let changeVariablesForStruct (changeVariable: Variable -> Term) (Structure(functor', prms)) =
@@ -16,37 +16,40 @@ module VariableUnify =
     let rec changeVariablesForList (changeVariable: Variable -> Term) (list: TypedListTerm) =
         match list with
         | NilTerm -> NilTerm
-        | VarListTerm v -> 
-            match changeVariable v with
-            | VariableTerm(v) -> VarListTerm(v)
+        | VarListTerm varListTerm -> 
+            match changeVariable varListTerm with
+            | VariableTerm(variable) -> VarListTerm variable
             | term -> TypedListTerm(term, NilTerm)
         | TypedListTerm(t1, r1) -> TypedListTerm(changeIfVariable changeVariable t1, changeVariablesForList changeVariable r1)
     
     let rec unifyParametersWithArguments (parameters: Parameter list) (arguments: Argument list) =
-        let rec unifyRightToConcreteLeft (t1: Term) (t2: Term) =
-            match (t1, t2) with
-            | (_, VariableTerm(_)) -> Some t1
-            | (VariableTerm(_), _) -> Some t2
-            | (TypedTerm(vt1), TypedTerm(vt2)) when vt1 = vt2 -> Some t2
-            | (StructureTerm(Structure(f1, p1)), StructureTerm(Structure(f2, p2))) when f1 = f2 && p1.Length = p2.Length ->
-                let newArgs = List.map2 (fun v1 v2 -> unifyRightToConcreteLeft v1 v2) p1 p2
+        let rec unifyRightToConcreteLeft (leftTerm: Term) (rightTerm: Term) =
+            match (leftTerm, rightTerm) with
+            | (_, VariableTerm(_)) -> Some leftTerm
+            | (VariableTerm(_), _) -> Some rightTerm
+            | (TypedTerm(leftTypedTerm), TypedTerm(rightTypedTerm)) when leftTypedTerm = rightTypedTerm -> Some rightTerm
+            | (StructureTerm(Structure(leftFunctor, leftParameters)), StructureTerm(Structure(rightFunctor, rightParameters))) when leftFunctor = rightFunctor && leftParameters.Length = rightParameters.Length ->
+                let newArgs = List.map2 (fun leftVariable rightVariable -> unifyRightToConcreteLeft leftVariable rightVariable) leftParameters rightParameters
                 if List.exists Option.isNone newArgs then
                     None
                 else
                     let newArgs = newArgs |> List.map Option.get
-                    Some(StructureTerm(Structure(f1, newArgs)))
-            | (ListTerm(l1), ListTerm(l2)) ->
-                match (l1, l2) with
-                | NilTerm, NilTerm -> Some t1
-                | _, VarListTerm _ -> Some (t1)
-                | VarListTerm _, _ -> Some (t2)
-                | TypedListTerm(l1, r1), TypedListTerm(l2, r2) -> 
-                    unifyRightToConcreteLeft l1 l2 |> Option.bind (fun l -> unifyRightToConcreteLeft (ListTerm r1) (ListTerm r2) |> Option.bind (fun (ListTerm(r)) -> Some <| ListTerm(TypedListTerm(l, r))))
+                    Some(StructureTerm(Structure(leftFunctor, newArgs)))
+            | (ListTerm(leftListTerm), ListTerm(rightListTerm)) ->
+                match (leftListTerm, rightListTerm) with
+                | NilTerm, NilTerm -> Some leftTerm
+                | _, VarListTerm _ -> Some leftTerm
+                | VarListTerm _, _ -> Some rightTerm
+                | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) -> 
+                    unifyRightToConcreteLeft leftTerm rightTerm
+                    |> Option.bind (fun unifiedTerm ->
+                        let concatListTerm (ListTerm(r)) = Some(ListTerm(TypedListTerm(unifiedTerm, r)))
+                        unifyRightToConcreteLeft (ListTerm leftTail) (ListTerm rightTail) |> Option.bind concatListTerm)
                 | _ -> None
             | _ -> None
         
         if parameters.Length = arguments.Length then
-            let prms = List.map2 (fun (Parameter(p)) (Argument(a)) -> unifyRightToConcreteLeft p a) parameters arguments
+            let prms = List.map2 (fun (Parameter(paramer)) (Argument(argument)) -> unifyRightToConcreteLeft paramer argument) parameters arguments
             if List.exists Option.isNone prms then
                 None
             else

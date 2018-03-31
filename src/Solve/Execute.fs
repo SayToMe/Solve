@@ -10,42 +10,42 @@ open ExpressionUnify
 
 module Execute =
     let rec executeCalc (calc: Calc) =
-        let getInnerNumber =
+        let getCalcInnerNumber =
             function
             | Value (TypedTerm(TypedNumberTerm(x))) -> x
             | _ as inner -> executeCalc inner
-        let op1Inner (op: double -> double) (in1: Calc) =
-            let (NumberTerm(n1)) = getInnerNumber in1
-            NumberTerm(op n1)
-        let op2Inner (op: double -> double -> double) (in1: Calc) (in2: Calc) =
-            let (NumberTerm(n1)) = getInnerNumber in1
-            let (NumberTerm(n2)) = getInnerNumber in2
-            NumberTerm(op n1 n2)
-        let safeDelete n1 n2 =
-            if n2 = 0. then
+        let getMonoOpInnerNumber (op: double -> double) (calc: Calc) =
+            let (NumberTerm(number)) = getCalcInnerNumber calc
+            NumberTerm(op number)
+        let getBiectiveOpInnerNumber (op: double -> double -> double) (leftCalc: Calc) (rightCalc: Calc) =
+            let (NumberTerm(leftNumber)) = getCalcInnerNumber leftCalc
+            let (NumberTerm(rightNumber)) = getCalcInnerNumber rightCalc
+            NumberTerm(op leftNumber rightNumber)
+        let safeDivision x y =
+            if y = 0. then
                 nan
             else
-                n1 / n2
+                x / y
 
         match calc with
-        | Value (TypedTerm(TypedNumberTerm(NumberTerm v1))) -> NumberTerm v1
-        | Value (StructureTerm(Structure(functor', args))) ->
+        | Value (TypedTerm(TypedNumberTerm(NumberTerm number))) -> NumberTerm number
+        | Value (StructureTerm(Structure(functor', arguments))) ->
             match functor' with
-            | "+" when args.Length = 2 -> executeCalc (Plus(Value(args.[0]), Value(args.[1])))
-            | "-" when args.Length = 2 -> executeCalc (Subsctruct(Value(args.[0]), Value(args.[1])))
-            | "*" when args.Length = 2 -> executeCalc (Multiply(Value(args.[0]), Value(args.[1])))
-            | "/" when args.Length = 2 -> executeCalc (Division(Value(args.[0]), Value(args.[1])))
-            | "-" when args.Length = 1 -> executeCalc (Invert(Value(args.[0])))
-            | "sqrt" when args.Length = 1 -> executeCalc (Sqrt(Value(args.[0])))
-            | "log" when args.Length = 2 -> executeCalc (Log(Value(args.[0]), Value(args.[1])))
+            | "+" when arguments.Length = 2 -> executeCalc (Plus(Value(arguments.[0]), Value(arguments.[1])))
+            | "-" when arguments.Length = 2 -> executeCalc (Subsctruct(Value(arguments.[0]), Value(arguments.[1])))
+            | "*" when arguments.Length = 2 -> executeCalc (Multiply(Value(arguments.[0]), Value(arguments.[1])))
+            | "/" when arguments.Length = 2 -> executeCalc (Division(Value(arguments.[0]), Value(arguments.[1])))
+            | "-" when arguments.Length = 1 -> executeCalc (Invert(Value(arguments.[0])))
+            | "sqrt" when arguments.Length = 1 -> executeCalc (Sqrt(Value(arguments.[0])))
+            | "log" when arguments.Length = 2 -> executeCalc (Log(Value(arguments.[0]), Value(arguments.[1])))
             | _ as c -> failwithf "Cant find according calc functor'. %A" c
-        | Plus (c1, c2) -> op2Inner (+) c1 c2
-        | Subsctruct (c1, c2) -> op2Inner (-) c1 c2
-        | Multiply (c1, c2) -> op2Inner (*) c1 c2
-        | Division (c1, c2) -> op2Inner safeDelete c1 c2
-        | Invert (c1) -> op1Inner (~-) c1
-        | Sqrt (c1) -> op1Inner System.Math.Sqrt c1
-        | Log (c1, c2) -> op2Inner (fun v n -> System.Math.Log(v, n)) c1 c2
+        | Plus (leftCalc, rightCalc) -> getBiectiveOpInnerNumber (+) leftCalc rightCalc
+        | Subsctruct (leftCalc, rightCalc) -> getBiectiveOpInnerNumber (-) leftCalc rightCalc
+        | Multiply (leftCalc, rightCalc) -> getBiectiveOpInnerNumber (*) leftCalc rightCalc
+        | Division (leftCalc, rightCalc) -> getBiectiveOpInnerNumber safeDivision leftCalc rightCalc
+        | Invert (calc) -> getMonoOpInnerNumber (~-) calc
+        | Sqrt (calc) -> getMonoOpInnerNumber System.Math.Sqrt calc
+        | Log (leftCalc, rightCalc) -> getBiectiveOpInnerNumber (fun v n -> System.Math.Log(v, n)) leftCalc rightCalc
         | _ as c -> failwithf "incorrect calc expression called. %A" c
 
     // TODO: maybe we should unify each time we execute expression?
@@ -55,12 +55,12 @@ module Execute =
     // no change variable fn, goal is unified right there
     let rec executeExpression (expr: Expression) (executeCustom: GoalSignature -> #seq<Term list>) (changeVariableFn: Variable -> Term) =
         let keepOnlyFirstCut exprs =
-            let rec exprHasCut e =
-                match e with
+            let rec exprHasCut expr =
+                match expr with
                 | Cut -> true
-                | AndExpression(e1, e2) -> exprHasCut e1 || exprHasCut e2
-                | OrExpression(e1, e2) -> exprHasCut e1 || exprHasCut e2
-                | NotExpression(e) -> exprHasCut e
+                | AndExpression(leftExpr, rightExpr) -> exprHasCut leftExpr || exprHasCut rightExpr
+                | OrExpression(leftExpr, rightExpr) -> exprHasCut leftExpr || exprHasCut rightExpr
+                | NotExpression(expr) -> exprHasCut expr
                 | _ -> false
 
             Seq.unfold (fun seq ->
@@ -78,128 +78,128 @@ module Execute =
 
         let changeIfVariable changeVariable =
             function
-            | VariableTerm(v) -> changeVariable v
-            | a -> a
+            | VariableTerm(variable) -> changeVariable variable
+            | term -> term
             
         // TODO check structure execute is correct
-        let rec executeMap (condition: TypedTerm -> TypedTerm -> bool) (e1: Term) (e2: Term): (Term * Term) seq =
+        let rec executeMap (condition: TypedTerm -> TypedTerm -> bool) (leftTerm: Term) (rightTerm: Term): (Term * Term) seq =
             // Hack for equality check
             let conditionIsEquality = condition (TypedNumberTerm(NumberTerm(1.))) (TypedNumberTerm(NumberTerm(1.)))
 
-            let e1 = changeIfVariable changeVariableFn e1
-            let e2 = changeIfVariable changeVariableFn e2
-            match (e1, e2) with
-            | (VariableTerm(_), VariableTerm(_)) -> Seq.singleton (e2, e2)
-            | (VariableTerm(_), TypedTerm(_)) -> Seq.singleton (e2, e2)
-            | (VariableTerm(_), StructureTerm(_)) -> Seq.singleton (e2, e2)
-            | (VariableTerm(_), ListTerm(_)) -> Seq.singleton (e2, e2)
-            | (TypedTerm(_), VariableTerm(_)) -> Seq.singleton (e1, e1)
-            | (StructureTerm(_), VariableTerm(_)) -> Seq.singleton (e1, e1)
-            | (ListTerm(_), VariableTerm(_)) -> Seq.singleton (e1, e1)
-            | (TypedTerm(v1), TypedTerm(v2)) ->
-                if condition v1 v2 then
-                    Seq.singleton (e1, e2)
+            let leftTerm = changeIfVariable changeVariableFn leftTerm
+            let rightTerm = changeIfVariable changeVariableFn rightTerm
+            match (leftTerm, rightTerm) with
+            | (VariableTerm(_), VariableTerm(_)) -> Seq.singleton (rightTerm, rightTerm)
+            | (VariableTerm(_), TypedTerm(_)) -> Seq.singleton (rightTerm, rightTerm)
+            | (VariableTerm(_), StructureTerm(_)) -> Seq.singleton (rightTerm, rightTerm)
+            | (VariableTerm(_), ListTerm(_)) -> Seq.singleton (rightTerm, rightTerm)
+            | (TypedTerm(_), VariableTerm(_)) -> Seq.singleton (leftTerm, leftTerm)
+            | (StructureTerm(_), VariableTerm(_)) -> Seq.singleton (leftTerm, leftTerm)
+            | (ListTerm(_), VariableTerm(_)) -> Seq.singleton (leftTerm, leftTerm)
+            | (TypedTerm(leftTypedTerm), TypedTerm(rightTypedTerm)) ->
+                if condition leftTypedTerm rightTypedTerm then
+                    Seq.singleton (leftTerm, rightTerm)
                 else
                     Seq.empty
-            | (StructureTerm(s1), StructureTerm(s2)) ->
-                if conditionIsEquality && s1 = s2 then
-                    Seq.singleton (e1, e2)
+            | (StructureTerm(leftStructureTerm), StructureTerm(rightStructureTerm)) ->
+                if conditionIsEquality && leftStructureTerm = rightStructureTerm then
+                    Seq.singleton (leftTerm, rightTerm)
                 else
                     Seq.empty
-            | (ListTerm l1, ListTerm l2) ->
-                let rec procList2 l1 l2 =
-                    match l1, l2 with
+            | (ListTerm leftListTerm, ListTerm rightListTerm) ->
+                let rec procListChangedVariable leftList rightList =
+                    match leftList, rightList with
                     | NilTerm, NilTerm -> Seq.singleton (NilTerm, NilTerm)
-                    | VarListTerm _, _ -> Seq.singleton (l2, l2)
-                    | _, VarListTerm _ -> Seq.singleton (l1, l1)
-                    | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
-                        let t1 = changeIfVariable changeVariableFn t1
-                        let t2 = changeIfVariable changeVariableFn t2
+                    | VarListTerm _, _ -> Seq.singleton (rightList, rightList)
+                    | _, VarListTerm _ -> Seq.singleton (leftList, leftList)
+                    | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+                        let leftTerm = changeIfVariable changeVariableFn leftTerm
+                        let rightTerm = changeIfVariable changeVariableFn rightTerm
 
-                        let unift = executeMap condition t1 t2
+                        let unift = executeMap condition leftTerm rightTerm
 
                         unift
                         |> Seq.map fst
-                        |> Seq.collect (fun t -> 
-                            procList2 r1 r2
-                            |> Seq.map (fun (p1, p2) -> 
-                                (TypedListTerm(t, p1), TypedListTerm(t, p2))
+                        |> Seq.collect (fun term -> 
+                            procListChangedVariable leftTail rightTail
+                            |> Seq.map (fun (leftTail, rightTail) -> 
+                                (TypedListTerm(term, leftTail), TypedListTerm(term, rightTail))
                             )
                         )
                     | _ -> Seq.empty
-                procList2 l1 l2
-                |> Seq.map (fun (lp1, lp2) -> ListTerm(lp1), ListTerm(lp2))
-            | _ -> failwith "unexpected execute binary expression arguments"
+                procListChangedVariable leftListTerm rightListTerm
+                |> Seq.map (fun (leftListTerm, rightListTerm) -> ListTerm(leftListTerm), ListTerm(rightListTerm))
+            | _ -> failwithf "Unexpected execute binary expression arguments %A, %A" leftTerm rightTerm
 
-        let rec executeBinaryExpression (functor': Term * Term -> Expression) (condition: TypedTerm -> TypedTerm -> bool) (e1: Term) (e2: Term): Expression seq =
-            executeMap condition e1 e2 |> Seq.map functor'
+        let rec executeBinaryExpression (functor': Term * Term -> Expression) (condition: TypedTerm -> TypedTerm -> bool) (leftTerm: Term) (rightTerm: Term): Expression seq =
+            executeMap condition leftTerm rightTerm |> Seq.map functor'
         
         match expr with
         | True -> Seq.singleton True
         | False -> Seq.empty
         | Cut -> Seq.singleton Cut
-        | NotExpression e ->
-            let executed = executeExpression (AndExpression(Cut, e)) executeCustom changeVariableFn
+        | NotExpression expr ->
+            let executed = executeExpression (AndExpression(Cut, expr)) executeCustom changeVariableFn
             if Seq.isEmpty executed then
-                Seq.singleton (NotExpression e)
+                Seq.singleton (NotExpression expr)
             else
                 Seq.empty
-        | OrExpression (e1, e2) ->
-            let first = executeExpression e1 executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted e2))
-            let second = (executeExpression e2 executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted e1, x)))
+        | OrExpression (leftExpr, rightExpr) ->
+            let first = executeExpression leftExpr executeCustom changeVariableFn |> Seq.map (fun v -> OrExpression(v, NotExecuted rightExpr))
+            let second = (executeExpression rightExpr executeCustom changeVariableFn |> Seq.map (fun x -> OrExpression(NotExecuted leftExpr, x)))
 
             Seq.append first second |> keepOnlyFirstCut
-        | AndExpression (e1, e2) ->
-            let executed1 = executeExpression e1 executeCustom changeVariableFn
+        | AndExpression (leftExpr, rightExpr) ->
+            let executedExpressionResults = executeExpression leftExpr executeCustom changeVariableFn
 
-            match e2 with
-            | Cut -> Seq.truncate 1 executed1 |> Seq.map (fun e1res -> AndExpression(e1res, e2))
+            match rightExpr with
+            | Cut -> Seq.truncate 1 executedExpressionResults |> Seq.map (fun leftExprResult -> AndExpression(leftExprResult, rightExpr))
             | _ ->
-                executed1
-                |> Seq.collect (fun _e1 ->
-                    let fixChangedVariables1 =  getChangedVariableFns e1 _e1
+                executedExpressionResults
+                |> Seq.collect (fun executedLeftExprRes ->
+                    let tofixChangedVariablesResults =  getChangedVariableFns leftExpr executedLeftExprRes
 
-                    fixChangedVariables1
-                    |> Seq.collect (fun fn ->
-                        let _e2 = unifyExpression e2 fn
-                        let fixChangedVariables2 = getChangedVariableFns e2 _e2
+                    tofixChangedVariablesResults
+                    |> Seq.collect (fun changeVariables ->
+                        let changedExpression = unifyExpression rightExpr changeVariables
+                        let toFixChangedVariablesResult = getChangedVariableFns rightExpr changedExpression
 
-                        fixChangedVariables2
+                        toFixChangedVariablesResult
                         |> Seq.collect (fun fn ->
-                            executeExpression _e2 executeCustom fn
-                            |> Seq.map (fun _e2res -> AndExpression(_e1, _e2res))
+                            executeExpression changedExpression executeCustom fn
+                            |> Seq.map (fun executedRightExprRes -> AndExpression(executedLeftExprRes, executedRightExprRes))
                         )
                     )
                 )
-        | ResultExpression e -> Seq.singleton (ResultExpression e)
+        | ResultExpression expr -> Seq.singleton (ResultExpression expr)
         | CallExpression (GoalSignature(name, args)) ->
             executeCustom (GoalSignature(name, args))
             |> Seq.map (fun resTerms -> CallExpression(GoalSignature(name, toArgs resTerms)))
-        | CalcExpr (v, c) ->
-            let v = changeIfVariable changeVariableFn v
-            let c = unifyCalc changeVariableFn c
-            match v with
-            | VariableTerm(_) -> Seq.singleton (CalcExpr(TypedTerm(TypedNumberTerm(executeCalc c)), c))
-            | TypedTerm(TypedNumberTerm(v)) when v = (executeCalc c) -> Seq.singleton (CalcExpr(TypedTerm(TypedNumberTerm(v)), c))
+        | CalcExpr (term, calc) ->
+            let changedTerm = changeIfVariable changeVariableFn term
+            let calc = unifyCalc changeVariableFn calc
+            match changedTerm with
+            | VariableTerm(_) -> Seq.singleton (CalcExpr(TypedTerm(TypedNumberTerm(executeCalc calc)), calc))
+            | TypedTerm(TypedNumberTerm(number)) when number = (executeCalc calc) -> Seq.singleton (CalcExpr(TypedTerm(TypedNumberTerm(number)), calc))
             | _ -> Seq.empty
-        | EqExpr (e1, e2) -> executeBinaryExpression EqExpr (=) e1 e2
-        | GrExpr (e1, e2) -> executeBinaryExpression GrExpr (>) e1 e2
-        | LeExpr (e1, e2) -> executeBinaryExpression LeExpr (<) e1 e2
+        | EqExpr (leftExpr, rightExpr) -> executeBinaryExpression EqExpr (=) leftExpr rightExpr
+        | GrExpr (leftExpr, rightExpr) -> executeBinaryExpression GrExpr (>) leftExpr rightExpr
+        | LeExpr (leftExpr, rightExpr) -> executeBinaryExpression LeExpr (<) leftExpr rightExpr
         | _ -> Seq.empty
     
     let getExpressionVariables expr =
         let rec getVariablesFromTerm term =
             match term with
-            | VariableTerm(v) -> [v]
+            | VariableTerm(variable) -> [variable]
             | StructureTerm(Structure(_, terms)) -> terms |> List.collect getVariablesFromTerm
-            | ListTerm(l) -> 
-                match l with
+            | ListTerm(listTerm) -> 
+                match listTerm with
                 | NilTerm -> []
-                | VarListTerm(v) -> [v]
-                | TypedListTerm(t, l) ->
-                    match t with
-                    | VariableTerm(v) -> [v] @ getVariablesFromTerm (ListTerm(l))
-                    | _ -> getVariablesFromTerm (ListTerm(l))
+                | VarListTerm(varListTerm) -> [varListTerm]
+                | TypedListTerm(term, listTail) ->
+                    match term with
+                    | VariableTerm(variableTerm) -> [variableTerm] @ getVariablesFromTerm (ListTerm(listTail))
+                    | _ -> getVariablesFromTerm (ListTerm(listTail))
             | _ -> []
 
         let rec getExprVariables expr =
@@ -207,42 +207,42 @@ module Execute =
             | True -> []
             | False -> []
             | Cut -> []
-            | NotExpression e -> getExprVariables e
-            | OrExpression (e1, e2) -> getExprVariables e1 @ getExprVariables e2
-            | AndExpression (e1, e2) -> getExprVariables e1 @ getExprVariables e2
+            | NotExpression expr -> getExprVariables expr
+            | OrExpression (leftExpr, rightExpr) -> getExprVariables leftExpr @ getExprVariables rightExpr
+            | AndExpression (leftExpr, rightExpr) -> getExprVariables leftExpr @ getExprVariables rightExpr
             | ResultExpression t -> getVariablesFromTerm t
             | CallExpression (GoalSignature(_, args)) -> args |> fromArgs |> List.collect getVariablesFromTerm
             | CalcExpr (v, _) -> getVariablesFromTerm v
-            | EqExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
-            | GrExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
-            | LeExpr (e1, e2) -> getVariablesFromTerm e1 @ getVariablesFromTerm e2
+            | EqExpr (leftTerm, rightTerm) -> getVariablesFromTerm leftTerm @ getVariablesFromTerm rightTerm
+            | GrExpr (leftTerm, rightTerm) -> getVariablesFromTerm leftTerm @ getVariablesFromTerm rightTerm
+            | LeExpr (leftTerm, rightTerm) -> getVariablesFromTerm leftTerm @ getVariablesFromTerm rightTerm
             | _ -> []
         getExprVariables expr
         |> List.distinct
         
     // Assumption: expressions are the same
     let getExpressionVariableValues expr resexpr =
-        let rec getVariableValueFromTerm (term: Term) (resterm: Term) =
+        let rec getVariableValueFromTerm (term: Term) (resultTerm: Term) =
             match term with
-            | VariableTerm(v) -> [(v, resterm)]
+            | VariableTerm(variable) -> [(variable, resultTerm)]
             | StructureTerm(Structure(_, terms)) ->
-                match resterm with
+                match resultTerm with
                 | StructureTerm(Structure(_, resterms)) when terms.Length = resterms.Length ->
                     (terms, resterms)
-                    ||> List.map2 (fun t1 t2 -> getVariableValueFromTerm t1 t2)
-                    |> List.collect (fun x -> x)
-                | StructureTerm(Structure(_, resterms)) when terms.Length <> resterms.Length ->
+                    ||> List.map2 (fun leftTerm rightTerm -> getVariableValueFromTerm leftTerm rightTerm)
+                    |> List.collect id
+                | StructureTerm(Structure(_, resultTerms)) when terms.Length <> resultTerms.Length ->
                     failwith "Structure term could be unified only with structure term of same arity"
                 | _ -> failwith "Structure term can't be unified with anything by structure term"
-            | ListTerm(l) ->
-                match resterm with
-                | ListTerm(resl) ->
-                    match l, resl with
+            | ListTerm(listTerm) ->
+                match resultTerm with
+                | ListTerm(resultListTerm) ->
+                    match listTerm, resultListTerm with
                     | NilTerm, NilTerm -> []
-                    | VarListTerm(v), valt -> [(v, ListTerm(valt))]
-                    | TypedListTerm(t, tail), TypedListTerm(t1, tail1) ->
-                        match t with
-                        | VariableTerm(v) -> [(v, t1)] @ getVariableValueFromTerm (ListTerm tail) (ListTerm tail1)
+                    | VarListTerm(variable), valt -> [(variable, ListTerm(valt))]
+                    | TypedListTerm(term, tail), TypedListTerm(t1, tail1) ->
+                        match term with
+                        | VariableTerm(variable) -> [(variable, t1)] @ getVariableValueFromTerm (ListTerm tail) (ListTerm tail1)
                         | _ -> getVariableValueFromTerm (ListTerm tail) (ListTerm tail1)
                     | _ -> failwith "Incorrectly defined term/resterm"
                 | _ -> failwith "List term can't be unified with anything but list term"
@@ -256,56 +256,56 @@ module Execute =
             | NotExpression _, NotExpression _ -> []
             | _, NotExecuted _ -> []
             | NotExecuted _, _ -> []
-            | OrExpression (e1, e2), OrExpression (e1', e2') ->
-                getExprVariables e1 e1' @ getExprVariables e2 e2'
-            | AndExpression (e1, e2), AndExpression (e1', e2')  ->
-                getExprVariables e1 e1' @ getExprVariables e2 e2'
-            | ResultExpression t, ResultExpression t' -> getVariableValueFromTerm t t'
+            | OrExpression (leftFirstExpr, leftSecondExpr), OrExpression (rightFirstExpr, rightSecondExpr) ->
+                getExprVariables leftFirstExpr rightFirstExpr @ getExprVariables leftSecondExpr rightSecondExpr
+            | AndExpression (leftFirstExpr, leftSecondExpr), AndExpression (rightFirstExpr, rightSecondExpr)  ->
+                getExprVariables leftFirstExpr rightFirstExpr @ getExprVariables leftSecondExpr rightSecondExpr
+            | ResultExpression leftTerm, ResultExpression rightTerm -> getVariableValueFromTerm leftTerm rightTerm
             | CallExpression (GoalSignature(name, args)), CallExpression (GoalSignature(name', args')) when name = name' && args.Length = args'.Length ->
                 (fromArgs args, fromArgs args') ||> List.map2 (fun a a' -> getVariableValueFromTerm a a') |> List.collect (fun x -> x)
-            | CalcExpr (v, _), CalcExpr (v', _) ->
-                getVariableValueFromTerm v v'
-            | EqExpr (e1, e2), EqExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
-            | GrExpr (e1, e2), GrExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
-            | LeExpr (e1, e2), LeExpr (e1', e2') -> getVariableValueFromTerm e1 e1' @ getVariableValueFromTerm e2 e2'
+            | CalcExpr (leftTerm, _), CalcExpr (rightTerm, _) ->
+                getVariableValueFromTerm leftTerm rightTerm
+            | EqExpr (leftFirstTerm, leftSecondTerm), EqExpr (rightFirstTerm, rightSecondTerm) -> getVariableValueFromTerm leftFirstTerm rightFirstTerm @ getVariableValueFromTerm leftSecondTerm rightSecondTerm
+            | GrExpr (leftFirstTerm, leftSecondTerm), GrExpr (rightFirstTerm, rightSecondTerm) -> getVariableValueFromTerm leftFirstTerm rightFirstTerm @ getVariableValueFromTerm leftSecondTerm rightSecondTerm
+            | LeExpr (leftFirstTerm, leftSecondTerm), LeExpr (rightFirstTerm, rightSecondTerm) -> getVariableValueFromTerm leftFirstTerm rightFirstTerm @ getVariableValueFromTerm leftSecondTerm rightSecondTerm
             | _ -> failwithf "Failed to retrieve variables from %A to %A" expr resexpr
         getExprVariables expr resexpr
         |> List.distinct
-        |> List.filter (fun vt ->
-            match vt with
-            | (v1, VariableTerm(v2)) when v1 = v2 -> false
-            | (v1, ListTerm(VarListTerm(v2))) when v1 = v2 -> false
+        |> List.filter (fun variableTermPair ->
+            match variableTermPair with
+            | (variable, VariableTerm(variableTerm)) when variable = variableTerm -> false
+            | (variable, ListTerm(VarListTerm(variableListTerm))) when variable = variableListTerm -> false
             | _ -> true
         )
 
     let postExecuteUnify fromArgs resArgs =
         fromArgs
-        |> Seq.map (fun vs ->
-            let rec procl l1 l2 =
-                match l1, l2 with
+        |> Seq.map (fun terms ->
+            let rec procList leftList rightList =
+                match leftList, rightList with
                 | NilTerm, NilTerm -> NilTerm
-                | VarListTerm(v1), VarListTerm(_) -> VarListTerm(v1)
-                | VarListTerm(_), v2 -> v2
-                | v1, VarListTerm(_) -> v1
-                | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
-                    match t1, t2 with
-                    | VariableTerm(_), VariableTerm(_) -> TypedListTerm(t2, procl r1 r2)
-                    | _ -> TypedListTerm(t2, procl r1 r2)
-                | _ -> failwith "?????"
+                | VarListTerm(leftVariable), VarListTerm(_) -> VarListTerm(leftVariable)
+                | VarListTerm(_), rightTerm -> rightTerm
+                | leftTerm, VarListTerm(_) -> leftTerm
+                | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+                    match leftTerm, rightTerm with
+                    | VariableTerm(_), VariableTerm(_) -> TypedListTerm(rightTerm, procList leftTail rightTail)
+                    | _ -> TypedListTerm(rightTerm, procList leftTail rightTail)
+                | _ -> failwithf "Unable to proceed post execution unification for lists %A, %A" leftList rightList
 
-            let res =
-                (vs, resArgs)
-                ||> List.map2 (fun v arg ->
-                    match v, arg with
-                    | VariableTerm(_), VariableTerm(_) -> (v, arg)
-                    | ListTerm(l1), ListTerm(l2) -> (v, ListTerm(procl l1 l2))
-                    | _ -> (v, v)
+            let resultPostUnification =
+                (terms, resArgs)
+                ||> List.map2 (fun leftTerm argumentTerm ->
+                    match leftTerm, argumentTerm with
+                    | VariableTerm(_), VariableTerm(_) -> (leftTerm, argumentTerm)
+                    | ListTerm(leftList), ListTerm(rightList) -> (leftTerm, ListTerm(procList leftList rightList))
+                    | _ -> (leftTerm, leftTerm)
                 )
-                        
-            (vs)
-            |> List.map (fun (v) -> 
-                let (_, vr) = List.find (fun (vv, _) -> vv = v) res
-                vr
+
+            (terms)
+            |> List.map (fun (term) -> 
+                let (_, resultTerm) = List.find (fun (initialTerm, _) -> initialTerm = term) resultPostUnification
+                resultTerm
             )
         )
 
@@ -315,9 +315,9 @@ module Execute =
     // Expression tree should be mostly unchanged
     // All changed variables can be caught afterwards
     let executeCustomExpression (Goal(expr)) (executeCustom: GoalSignature -> #seq<Term list>): ((Variable * Term) list) seq =
-        executeExpression expr executeCustom (fun v -> VariableTerm(v))
-        |> Seq.map (fun resExpr -> getExpressionVariableValues expr resExpr)
+        executeExpression expr executeCustom VariableTerm
+        |> Seq.map (getExpressionVariableValues expr)
 
     let exExpr (expr: Expression) (executeCustom: GoalSignature -> #seq<Term list>) (changeVariableFn: Variable -> Term): ((Variable * Term) list) seq =
         executeExpression expr executeCustom changeVariableFn
-        |> Seq.map (fun resExpr -> getExpressionVariableValues expr resExpr)
+        |> Seq.map (getExpressionVariableValues expr)

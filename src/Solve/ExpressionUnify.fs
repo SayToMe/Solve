@@ -9,108 +9,108 @@ open VariableUnify
 module ExpressionUnify =
     open VariableUnify
 
-    let rec unifyCalc changeVariable v =
+    let rec unifyCalc changeVariable calc =
         let rec changeCalcTermIfVariable =
             function
-            | Value(VariableTerm(v)) -> Value(changeVariable v)
-            | Value(TypedTerm(v)) -> Value(TypedTerm(v))
-            | Value(StructureTerm(v)) -> Value(StructureTerm(changeVariablesForStruct changeVariable v))
-            | _ as c -> unifyCalc changeVariable c
-        match v with
-        | Plus (v1, v2) -> Plus(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
-        | Subsctruct (v1, v2) -> Subsctruct(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
-        | Multiply (v1, v2) -> Multiply(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
-        | Division (v1, v2) -> Division(changeCalcTermIfVariable v1, changeCalcTermIfVariable v2)
-        | Invert (v1) -> Invert(changeCalcTermIfVariable v1)
-        | Sqrt (v1) -> Sqrt(changeCalcTermIfVariable v1)
-        | Log (v1, n) -> Log(changeCalcTermIfVariable v1, changeCalcTermIfVariable n)
-        | Value(_) as self -> changeCalcTermIfVariable self
+            | Value(VariableTerm(variableTerm)) -> Value(changeVariable variableTerm)
+            | Value(TypedTerm(typedTerm)) -> Value(TypedTerm(typedTerm))
+            | Value(StructureTerm(structureTerm)) -> Value(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
+            | _ as calc -> unifyCalc changeVariable calc
+        match calc with
+        | Plus (leftOp, rightOp) -> Plus(changeCalcTermIfVariable leftOp, changeCalcTermIfVariable rightOp)
+        | Subsctruct (leftOp, rightOp) -> Subsctruct(changeCalcTermIfVariable leftOp, changeCalcTermIfVariable rightOp)
+        | Multiply (leftOp, rightOp) -> Multiply(changeCalcTermIfVariable leftOp, changeCalcTermIfVariable rightOp)
+        | Division (leftOp, rightOp) -> Division(changeCalcTermIfVariable leftOp, changeCalcTermIfVariable rightOp)
+        | Invert (x) -> Invert(changeCalcTermIfVariable x)
+        | Sqrt (x) -> Sqrt(changeCalcTermIfVariable x)
+        | Log (x, s) -> Log(changeCalcTermIfVariable x, changeCalcTermIfVariable s)
+        | Value(_) as value -> changeCalcTermIfVariable value
 
     let rec unifyExpression expression changeVariable =
         // TODO: check if there should be inner structure unification
-        let postUnifyBinaryExpression (proc: Variable -> Term) (functor': Term * Term -> 'a) (t1: Term) (t2: Term) =
-            match (t1, t2) with
-            | (VariableTerm(v1), VariableTerm(v2)) -> functor'(proc v1, proc v2)
-            | (VariableTerm(v1), TypedTerm(_)) -> functor'(proc v1, t2)
-            | (VariableTerm(v1), StructureTerm(v2)) -> functor'(proc v1, StructureTerm(changeVariablesForStruct proc v2))
-            | (VariableTerm(v1), ListTerm(v2)) -> functor'(proc v1, ListTerm(changeVariablesForList proc v2))
-            | (TypedTerm(_), VariableTerm(v2)) -> functor'(t1, proc v2)
-            | (StructureTerm(v1), VariableTerm(v2)) -> functor'(StructureTerm(changeVariablesForStruct proc v1), proc v2)
-            | (ListTerm(v1), VariableTerm(v2)) -> functor'(ListTerm(changeVariablesForList proc v1), proc v2)
-            | (ListTerm(l1), ListTerm(l2)) -> functor'(ListTerm(changeVariablesForList proc l1), ListTerm(changeVariablesForList proc l2))
-            | _ -> functor'(t1, t2)
+        let postUnifyBinaryExpression (procVariableChange: Variable -> Term) (functor': Term * Term -> 'a) (leftTerm: Term) (rightTerm: Term) =
+            match (leftTerm, rightTerm) with
+            | (VariableTerm(leftVarTerm), VariableTerm(rightVarTerm)) -> functor'(procVariableChange leftVarTerm, procVariableChange rightVarTerm)
+            | (VariableTerm(leftVarTerm), TypedTerm(_)) -> functor'(procVariableChange leftVarTerm, rightTerm)
+            | (VariableTerm(leftVarTerm), StructureTerm(rightStructureTerm)) -> functor'(procVariableChange leftVarTerm, StructureTerm(changeVariablesForStruct procVariableChange rightStructureTerm))
+            | (VariableTerm(leftVarTerm), ListTerm(rightListTerm)) -> functor'(procVariableChange leftVarTerm, ListTerm(changeVariablesForList procVariableChange rightListTerm))
+            | (TypedTerm(_), VariableTerm(rightVarTerm)) -> functor'(leftTerm, procVariableChange rightVarTerm)
+            | (StructureTerm(leftStructureTerm), VariableTerm(rightVarTerm)) -> functor'(StructureTerm(changeVariablesForStruct procVariableChange leftStructureTerm), procVariableChange rightVarTerm)
+            | (ListTerm(leftListTerm), VariableTerm(rightVarTerm)) -> functor'(ListTerm(changeVariablesForList procVariableChange leftListTerm), procVariableChange rightVarTerm)
+            | (ListTerm(leftListTerm), ListTerm(rightListTerm)) -> functor'(ListTerm(changeVariablesForList procVariableChange leftListTerm), ListTerm(changeVariablesForList procVariableChange rightListTerm))
+            | _ -> functor'(leftTerm, rightTerm)
 
         match expression with
         | True -> True
         | False -> False
         | Cut -> Cut
-        | NotExpression e -> NotExpression (unifyExpression e changeVariable)
-        | OrExpression (e1, e2) -> OrExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
-        | AndExpression (e1, e2) -> AndExpression(unifyExpression e1 changeVariable, unifyExpression e2 changeVariable)
-        | ResultExpression e ->
-            match e with
-            | VariableTerm v -> ResultExpression (changeVariable v)
+        | NotExpression expr -> NotExpression (unifyExpression expr changeVariable)
+        | OrExpression (leftExpr, rightExpr) -> OrExpression(unifyExpression leftExpr changeVariable, unifyExpression rightExpr changeVariable)
+        | AndExpression (leftExpr, rightExpr) -> AndExpression(unifyExpression leftExpr changeVariable, unifyExpression rightExpr changeVariable)
+        | ResultExpression expr ->
+            match expr with
+            | VariableTerm variableTerm -> ResultExpression (changeVariable variableTerm)
             | TypedTerm _ -> expression
-            | StructureTerm(v) -> ResultExpression(StructureTerm(changeVariablesForStruct changeVariable v))
-            | ListTerm v -> ResultExpression(ListTerm(changeVariablesForList changeVariable v))
+            | StructureTerm structureTerm -> ResultExpression(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
+            | ListTerm listTerm -> ResultExpression(ListTerm(changeVariablesForList changeVariable listTerm))
         | CallExpression(GoalSignature(goalName, arguments)) ->
             let newGoalArgs =
                 arguments
                 |> fromArgs
                 |> List.map (function
-                            | VariableTerm(v) -> Argument(changeVariable v)
-                            | TypedTerm(v) -> Argument(TypedTerm(v))
-                            | StructureTerm(v) -> Argument(StructureTerm(changeVariablesForStruct changeVariable v))
-                            | ListTerm(v) -> Argument(ListTerm(changeVariablesForList changeVariable v)))
+                            | VariableTerm(variableTerm) -> Argument(changeVariable variableTerm)
+                            | TypedTerm(typedTerm) -> Argument(TypedTerm(typedTerm))
+                            | StructureTerm(structureTerm) -> Argument(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
+                            | ListTerm(listTerm) -> Argument(ListTerm(changeVariablesForList changeVariable listTerm)))
             CallExpression (GoalSignature(goalName, newGoalArgs))
-        | CalcExpr (v, c) ->
-            match v with
-            | VariableTerm(vv) -> CalcExpr(changeVariable vv, unifyCalc changeVariable c)
-            | TypedTerm(v) -> CalcExpr(TypedTerm(v), unifyCalc changeVariable c)
+        | CalcExpr (calcTerm, calc) ->
+            match calcTerm with
+            | VariableTerm(variableTerm) -> CalcExpr(changeVariable variableTerm, unifyCalc changeVariable calc)
+            | TypedTerm(typedTerm) -> CalcExpr(TypedTerm(typedTerm), unifyCalc changeVariable calc)
             | ListTerm _ -> failwith "Calc of list is not implemented yet"
             | StructureTerm _ -> failwith "Calc of custom struct is not implemented yet"
-        | EqExpr (e1, e2) -> postUnifyBinaryExpression changeVariable EqExpr e1 e2
-        | GrExpr (e1, e2) -> postUnifyBinaryExpression changeVariable GrExpr e1 e2
-        | LeExpr (e1, e2) -> postUnifyBinaryExpression changeVariable LeExpr e1 e2
+        | EqExpr (leftTerm, rightTerm) -> postUnifyBinaryExpression changeVariable EqExpr leftTerm rightTerm
+        | GrExpr (leftTerm, rightTerm) -> postUnifyBinaryExpression changeVariable GrExpr leftTerm rightTerm
+        | LeExpr (leftTerm, rightTerm) -> postUnifyBinaryExpression changeVariable LeExpr leftTerm rightTerm
         | _ -> failwith "unchecked something"
 
     // returns change variable functions according to execution branches
     let getChangedVariableFns initialExpression expression =
         /// There is a matching between t1 and t2 terms. After execution there could be changed variables that should be catched by every existing variable
-        let backwardsTermUnification (t1: Term) (t2: Term) (fn: Variable -> Term) (v: Variable) =
-            match t1 with
-            | VariableTerm(v1) when v1 = v -> t2
-            | _ -> fn v
+        let backwardsTermUnification (leftTerm: Term) (rightTerm: Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
+            match leftTerm with
+            | VariableTerm(variableTerm) when variableTerm = variable -> rightTerm
+            | _ -> procVarOtherChange variable
             
-        let postUnifyBinaryExpressions ((t1, t2): Term * Term) ((t3, t4): Term * Term) (fn: Variable -> Term) (v: Variable) =
-            let postUnify (t1: Term) (t2: Term) (v: Variable) =
-                match t1 with
-                | VariableTerm(v1) when v1 = v -> Some t2
+        let postUnifyBinaryExpressions ((leftFirstTerm, leftSecondTerm): Term * Term) ((rightFirstTerm, rightSecondTerm): Term * Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
+            let postUnify (leftTerm: Term) (rightTerm: Term) (variable: Variable) =
+                match leftTerm with
+                | VariableTerm(variableTerm) when variableTerm = variable -> Some rightTerm
                 | ListTerm(_) ->
-                    let rec unifl l1 l2 = 
-                        match l1, l2 with
+                    let rec unifl leftList rightList = 
+                        match leftList, rightList with
                         | NilTerm, NilTerm -> None
-                        | VarListTerm(v1), _ when v1 = v -> Some (ListTerm(l2))
-                        | TypedListTerm(VariableTerm(v1), _), TypedListTerm(t2, _) when v1 = v ->
-                            Some t2
-                        | TypedListTerm(_, r1), TypedListTerm(_, r2) ->
-                            unifl r1 r2
+                        | VarListTerm(varListTerm), _ when varListTerm = variable -> Some (ListTerm(rightList))
+                        | TypedListTerm(VariableTerm(leftVarTerm), _), TypedListTerm(rightVarTerm, _) when leftVarTerm = variable ->
+                            Some rightVarTerm
+                        | TypedListTerm(_, leftTail), TypedListTerm(_, rightTail) ->
+                            unifl leftTail rightTail
                         | _ -> None
 
-                    match t1, t2 with
-                    | ListTerm(l1), ListTerm(l2) -> unifl l1 l2
-                    | _ -> failwith "Unable to unify list with not list"
-                | _ -> 
-                    match fn v with
-                    | VariableTerm(uv) when uv = v -> None
+                    match leftTerm, rightTerm with
+                    | ListTerm(leftListTerm), ListTerm(rightListTerm) -> unifl leftListTerm rightListTerm
+                    | _ -> failwithf "Unable to unify list with not list %A, %A" leftTerm rightTerm
+                | _ ->
+                    match procVarOtherChange variable with
+                    | VariableTerm(variableFromTerm) when variableFromTerm = variable -> None
                     | res -> Some res
 
-            match postUnify t1 t3 v with
+            match postUnify leftFirstTerm rightFirstTerm variable with
             | Some resv -> resv
             | None ->
-                match postUnify t2 t4 v with
+                match postUnify leftSecondTerm rightSecondTerm variable with
                 | Some resv -> resv
-                | _ -> fn v
+                | _ -> procVarOtherChange variable
         
         let rec _getChangedVariableFn initialExpression expression (changedVariableFns: (Variable -> Term) list) =
             match (initialExpression, expression) with
@@ -118,63 +118,63 @@ module ExpressionUnify =
             | (False, False) -> changedVariableFns
             | (Cut, Cut) -> changedVariableFns
             | (_, NotExecuted _) -> changedVariableFns
-            | (NotExpression e1, NotExpression e2) -> _getChangedVariableFn e1 e2 changedVariableFns
-            | (OrExpression(e1, e2), OrExpression(e3, e4)) ->
-                let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
-                let changedFn2 = _getChangedVariableFn e2 e4 changedVariableFns
-                changedFn1@changedFn2
-            | (AndExpression(e1, e2), AndExpression(e3, e4)) ->
-                let changedFn1 = _getChangedVariableFn e1 e3 changedVariableFns
-                let changedFn2 = _getChangedVariableFn e2 e4 changedFn1
-                changedFn2
-            | (ResultExpression e1, ResultExpression e2) -> changedVariableFns |> List.map (backwardsTermUnification e1 e2)
-            | (CallExpression(GoalSignature(name1, goalArgs1)), CallExpression(GoalSignature(name2, goalArgs2))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
-                List.map (fun fn -> List.fold2 (fun fns a1 a2 -> backwardsTermUnification a1 a2 fns) fn (fromArgs goalArgs1) (fromArgs goalArgs2)) changedVariableFns
-            | (CalcExpr(v1, _), CalcExpr(v2, _)) -> changedVariableFns |> List.map (backwardsTermUnification v1 v2)
-            | (EqExpr(v1, v2), EqExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
-            | (GrExpr(v1, v2), GrExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
-            | (LeExpr(v1, v2), LeExpr(v3, v4)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (v1, v2) (v3, v4))
+            | (NotExpression leftExpr, NotExpression rightExpr) -> _getChangedVariableFn leftExpr rightExpr changedVariableFns
+            | (OrExpression(leftFirstExpr, leftRightExpr), OrExpression(rightFirstExpr, rightSecondExpr)) ->
+                let leftChangedVariable = _getChangedVariableFn leftFirstExpr rightFirstExpr changedVariableFns
+                let rightChangedVariable = _getChangedVariableFn leftRightExpr rightSecondExpr changedVariableFns
+                leftChangedVariable@rightChangedVariable
+            | (AndExpression(leftFirstExpr, leftSecondExpr), AndExpression(rightFirstExpr, rightSecondExpr)) ->
+                let leftChangedVariable = _getChangedVariableFn leftFirstExpr rightFirstExpr changedVariableFns
+                let rightChangedVariable = _getChangedVariableFn leftSecondExpr rightSecondExpr leftChangedVariable
+                rightChangedVariable
+            | (ResultExpression leftExpr, ResultExpression rightExpr) -> changedVariableFns |> List.map (backwardsTermUnification leftExpr rightExpr)
+            | (CallExpression(GoalSignature(leftName, leftArgs)), CallExpression(GoalSignature(rightName, rightArgs))) when leftName = rightName && leftArgs.Length = rightArgs.Length ->
+                List.map (fun changeVariable -> List.fold2 (fun changeVariables leftArgument rightArgument -> backwardsTermUnification leftArgument rightArgument changeVariables) changeVariable (fromArgs leftArgs) (fromArgs rightArgs)) changedVariableFns
+            | (CalcExpr(leftCalcTerm, _), CalcExpr(rightCalcTerm, _)) -> changedVariableFns |> List.map (backwardsTermUnification leftCalcTerm rightCalcTerm)
+            | (EqExpr(leftFirstTerm, leftSecondTerm), EqExpr(rightFirstTerm, rightSecondTerm)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (leftFirstTerm, leftSecondTerm) (rightFirstTerm, rightSecondTerm))
+            | (GrExpr(leftFirstTerm, leftSecondTerm), GrExpr(rightFirstTerm, rightSecondTerm)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (leftFirstTerm, leftSecondTerm) (rightFirstTerm, rightSecondTerm))
+            | (LeExpr(leftFirstTerm, leftSecondTerm), LeExpr(rightFirstTerm, rightSecondTerm)) -> changedVariableFns |> List.map (postUnifyBinaryExpressions (leftFirstTerm, leftSecondTerm) (rightFirstTerm, rightSecondTerm))
             | _ -> failwithf "failed to getChangedVariableFn result. %O != %O" initialExpression expression
-        _getChangedVariableFn initialExpression expression [(fun v -> VariableTerm(v))]
+        _getChangedVariableFn initialExpression expression [VariableTerm]
         
     let unifyRule (Rule(Signature(name, parameters), body)) arguments =
         let unifyExpressionByParams parameters arguments expression =
-            let changeVariable (Parameter(p)) a =
-                let retIfEquals variable result v = if v = variable then result else VariableTerm(v)
+            let changeVariable (Parameter(parameter)) argument =
+                let retIfEquals variable result checkedVariable = if checkedVariable = variable then result else VariableTerm(checkedVariable)
 
-                match (p, a) with
-                | VariableTerm(v1), VariableTerm(v2) -> fun v -> if v = v2 then VariableTerm v1 else VariableTerm v
-                | VariableTerm(v1), _ -> retIfEquals v1 a
-                | _, VariableTerm(v2) -> retIfEquals v2 p
-                | _ -> fun x -> VariableTerm x
+                match (parameter, argument) with
+                | VariableTerm(leftVariable), VariableTerm(rightVariable) -> fun checkedVariable -> if checkedVariable = rightVariable then VariableTerm leftVariable else VariableTerm checkedVariable
+                | VariableTerm(leftVariable), _ -> retIfEquals leftVariable argument
+                | _, VariableTerm(rightVariable) -> retIfEquals rightVariable parameter
+                | _ -> VariableTerm
 
             unifyParametersWithArguments parameters arguments
             |> Option.bind (fun unifiedArgs ->
                 let newExpr = 
                     List.zip parameters unifiedArgs
-                    |> List.fold (fun acc (p, b) -> unifyExpression acc (changeVariable p b)) expression
+                    |> List.fold (fun acc (parameter, unifiedArg) -> unifyExpression acc (changeVariable parameter unifiedArg)) expression
                 (newExpr, unifiedArgs)
                 |> Some)
 
         unifyExpressionByParams parameters arguments body
         |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
-    let rec unifyListTerms (t1: TypedListTerm) (t2: TypedListTerm): Term -> Term =
-        match (t1, t2) with
-        | NilTerm, NilTerm -> fun v -> v
-        | VarListTerm(v1), s -> fun v -> if v = VariableTerm(v1) then ListTerm(s) else v
-        | TypedListTerm(t1, r1), TypedListTerm(t2, r2) ->
-            fun v -> if v = t1 then t2 else unifyListTerms r1 r2 v
-        | _ -> failwith "???"
+    let rec unifyListTerms (leftListTerm: TypedListTerm) (rightListTerm: TypedListTerm): Term -> Term =
+        match (leftListTerm, rightListTerm) with
+        | NilTerm, NilTerm -> id
+        | VarListTerm(varListTerm), rightListTerm -> fun v -> if v = VariableTerm(varListTerm) then ListTerm(rightListTerm) else v
+        | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+            fun variableTerm -> if variableTerm = leftTerm then rightTerm else unifyListTerms leftTail rightTail variableTerm
+        | _ -> failwithf "Failed to unify two list terms %A, %A" leftListTerm rightListTerm
 
     let rec unifyResultToParameters arguments initialExpression expression =
-        let unifyWithArgs (args: Term list) (v1: Term) (v2: Term) =
-            args
-            |> List.map (fun a -> 
-                match v1, v2 with
-                | _ when a = v1 -> v2
-                | ListTerm(l1), ListTerm(l2) -> unifyListTerms l1 l2 a
-                | _ -> a
+        let unifyWithArgs (arguments: Term list) (left: Term) (right: Term) =
+            arguments
+            |> List.map (fun argument -> 
+                match left, right with
+                | _ when argument = left -> right
+                | ListTerm(leftList), ListTerm(rightList) -> unifyListTerms leftList rightList argument
+                | _ -> argument
             )
 
         match (initialExpression, expression) with
@@ -182,14 +182,14 @@ module ExpressionUnify =
         | (False, False) -> []
         | (Cut, Cut) -> arguments
         | (_, NotExecuted _) -> arguments
-        | (NotExpression e1, NotExpression e2) -> unifyResultToParameters arguments e1 e2
-        | (OrExpression(e1, e2), OrExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
-        | (AndExpression(e1, e2), AndExpression(e3, e4)) -> unifyResultToParameters (unifyResultToParameters arguments e1 e3) e2 e4
-        | (ResultExpression e1, ResultExpression e2) -> arguments |> List.map (fun a -> if a = e1 then e2 else a)
-        | (CallExpression(GoalSignature(name1, goalArgs1)), CallExpression(GoalSignature(name2, goalArgs2))) when name1 = name2 && goalArgs1.Length = goalArgs2.Length ->
-            List.fold2 (fun args (arg1) (arg2) -> unifyWithArgs args arg1 arg2) arguments (fromArgs goalArgs1) (fromArgs goalArgs2)
-        | (CalcExpr(v1, _), CalcExpr(v2, _)) -> unifyWithArgs arguments v1 v2
-        | (EqExpr(v1, v2), EqExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
-        | (GrExpr(v1, v2), GrExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
-        | (LeExpr(v1, v2), LeExpr(v3, v4)) -> unifyWithArgs (unifyWithArgs arguments v1 v3) v2 v4
+        | (NotExpression leftExpr, NotExpression rightExpr) -> unifyResultToParameters arguments leftExpr rightExpr
+        | (OrExpression(leftFirstExpr, leftSecondExpr), OrExpression(rightFirstExpr, rightSecondExpr)) -> unifyResultToParameters (unifyResultToParameters arguments leftFirstExpr rightFirstExpr) leftSecondExpr rightSecondExpr
+        | (AndExpression(leftFirstExpr, leftSecondExpr), AndExpression(rightFirstExpr, rightSecondExpr)) -> unifyResultToParameters (unifyResultToParameters arguments leftFirstExpr rightFirstExpr) leftSecondExpr rightSecondExpr
+        | (ResultExpression leftExpr, ResultExpression rightExpr) -> arguments |> List.map (fun argument -> if argument = leftExpr then rightExpr else argument)
+        | (CallExpression(GoalSignature(leftGoalName, leftArguments)), CallExpression(GoalSignature(rightGoalName, rightArguments))) when leftGoalName = rightGoalName && leftArguments.Length = rightArguments.Length ->
+            List.fold2 (fun args (leftArgument) (rightArgument) -> unifyWithArgs args leftArgument rightArgument) arguments (fromArgs leftArguments) (fromArgs rightArguments)
+        | (CalcExpr(leftTerm, _), CalcExpr(rightTerm, _)) -> unifyWithArgs arguments leftTerm rightTerm
+        | (EqExpr(leftFirstExpr, leftSecondExpr), EqExpr(rightFirstExpr, rightSecondExpr)) -> unifyWithArgs (unifyWithArgs arguments leftFirstExpr rightFirstExpr) leftSecondExpr rightSecondExpr
+        | (GrExpr(leftFirstExpr, leftSecondExpr), GrExpr(rightFirstExpr, rightSecondExpr)) -> unifyWithArgs (unifyWithArgs arguments leftFirstExpr rightFirstExpr) leftSecondExpr rightSecondExpr
+        | (LeExpr(leftFirstExpr, leftSecondExpr), LeExpr(rightFirstExpr, rightSecondExpr)) -> unifyWithArgs (unifyWithArgs arguments leftFirstExpr rightFirstExpr) leftSecondExpr rightSecondExpr
         | _ -> failwithf "failed to unify result. %O != %O" initialExpression expression

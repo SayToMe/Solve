@@ -54,29 +54,29 @@ module Rule =
     module Transformers =
         [<DebuggerStepThrough>]
         let resp = function
-            | Parameter(VariableTerm v) -> ResultExpression (VariableTerm v)
-            | Parameter(TypedTerm v) -> ResultExpression (TypedTerm v)
-            | Parameter(StructureTerm(v)) -> ResultExpression(StructureTerm(v))
-            | Parameter(ListTerm(v)) -> ResultExpression(ListTerm(v))
+            | Parameter(VariableTerm variableTerm) -> ResultExpression (VariableTerm variableTerm)
+            | Parameter(TypedTerm typedTerm) -> ResultExpression (TypedTerm typedTerm)
+            | Parameter(StructureTerm(structureTerm)) -> ResultExpression(StructureTerm(structureTerm))
+            | Parameter(ListTerm(listTerm)) -> ResultExpression(ListTerm(listTerm))
 
         [<DebuggerStepThrough>]    
-        let fromArgs = List.map (fun (Argument(a)) -> a)
+        let fromArgs = List.map (fun (Argument(term)) -> term)
         [<DebuggerStepThrough>]
         let toArgs = List.map Argument
 
         [<DebuggerStepThrough>]
-        let fromParams = List.map (fun (Parameter(a)) -> a)
+        let fromParams = List.map (fun (Parameter(term)) -> term)
         [<DebuggerStepThrough>]
         let toParams = List.map Parameter
 
         [<DebuggerStepThrough>]
         let formatResult (result: Result) =
-            let format fn =
+            let format formatFn =
                 function
                 | [] -> "[]"
-                | [h] -> "[" + fn h + "]"
-                | list -> "[" + (List.fold (fun acc n -> if acc = "" then fn n else acc + ", " + fn n) "" list) + "]"
-            format (format (fun (a: Term) -> a.AsString)) result
+                | [head] -> "[" + formatFn head + "]"
+                | list -> "[" + (List.fold (fun acc current -> if acc = "" then formatFn current else acc + ", " + formatFn current) "" list) + "]"
+            format (format (fun (term: Term) -> term.AsString)) result
 
     module Builder =
         [<DebuggerStepThrough>]
@@ -84,16 +84,16 @@ module Rule =
         [<DebuggerStepThrough>]
         let (/=>) name variables = Signature(name, variables)
         [<DebuggerStepThrough>]
-        let (/|) expr1 expr2 = OrExpression (expr1, expr2)
+        let (/|) leftExpr rightExpr = OrExpression (leftExpr, rightExpr)
         [<DebuggerStepThrough>]
-        let (/&) expr1 expr2 = AndExpression (expr1, expr2)
+        let (/&) leftExpr rightExpr = AndExpression (leftExpr, rightExpr)
 
         [<DebuggerStepThrough>]
-        let (/=) e1 e2 = EqExpr (e1, e2)
+        let (/=) leftTerm rightTerm = EqExpr (leftTerm, rightTerm)
         [<DebuggerStepThrough>]
-        let (/>) e1 e2 = GrExpr (e1, e2)
+        let (/>) leftTerm rightTerm = GrExpr (leftTerm, rightTerm)
         [<DebuggerStepThrough>]
-        let (/<) e1 e2 = LeExpr (e1, e2)
+        let (/<) leftTerm rightTerm = LeExpr (leftTerm, rightTerm)
         
         [<DebuggerStepThrough>]
         let valp = function
