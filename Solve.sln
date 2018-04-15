@@ -45,6 +45,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "services", "services", "{38
 EndProject
 Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.WebApi", "services\Solve.WebApi\Solve.WebApi.fsproj", "{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}"
 EndProject
+Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.Terminal", "src\Solve.Interactive\Solve.Terminal.fsproj", "{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,7 @@ Global
 		{312C2CC4-7E30-48E7-820E-F00BBB7D8B2B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -69,6 +72,10 @@ Global
 		{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}.Release|Any CPU.Build.0 = Release|Any CPU
+		{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

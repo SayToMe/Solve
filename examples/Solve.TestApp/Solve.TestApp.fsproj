@@ -4,12 +4,12 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Interactive.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Solve/Solve.fsproj" />
     <ProjectReference Include="../../src/Solve.PrologParser/Solve.PrologParser.fsproj" />
+    <ProjectReference Include="../../src/Solve.Terminal/Solve.Terminal.fsproj" />
   </ItemGroup>
   <Import Project="../../.paket/Paket.Restore.targets" />
 </Project>
