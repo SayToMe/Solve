@@ -6,23 +6,18 @@ open System.Text.RegularExpressions
 
 open Solve.Terminal
 
-// ParseRegex parses a regular expression and returns a list of the strings that match each group in
-// the regular expression.
-// List.tail is called to eliminate the first element in the list, which is the full matched expression,
-// since only the matches for each group are wanted.
-let (|ParseRegex|_|) regex str =
-   let m = Regex(regex).Match(str)
-   if m.Success
-   then Some (List.tail [ for x in m.Groups -> x.Value ])
-   else None
-
 let deletePrevConsoleLine() =
     if Console.CursorTop > 0 then
         Console.Write(new string(' ', Console.WindowWidth))
         Console.SetCursorPosition(0, Console.CursorTop - 1)
 
-type ConsoleTerminal() =
+type ConsoleTerminal() as self =
     let kb: IKnowledgebaseWrapper = MutableKnowledgebase([]) :> IKnowledgebaseWrapper
+
+    let getBacktrackMode () =
+        let mode = Solve.Terminal.TerminalRunners.getBacktrackMode self
+        deletePrevConsoleLine()
+        mode
 
     interface ITerminal with
         member __.Solve goal = kb.Solve goal
@@ -32,7 +27,7 @@ type ConsoleTerminal() =
             | ModeLog mode -> printf "%s" mode.AsString
             | InfoLog info -> printfn "%s" info
             | SuccessInsertionLog(name, arity) -> printfn "Success insertion of %s/%i" name arity
-            | ResultLog res -> printfn "%s" res
+            | ResultLog res -> showResult res (printfn "%s") getBacktrackMode
             | ErrorLog error -> printfn "Error: %s" error
         member __.ReadInput() = Console.ReadLine()
         member __.ReadKey() = Console.ReadKey()
