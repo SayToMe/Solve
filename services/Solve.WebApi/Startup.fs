@@ -9,18 +9,23 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 
-
 type Startup private () =
     new (configuration: IConfiguration) as this =
         Startup() then
         this.Configuration <- configuration
 
-    // This method gets called by the runtime. Use this method to add services to the container.
     member this.ConfigureServices(services: IServiceCollection) =
-        // Add framework services.
-        services.AddMvc() |> ignore
+        services.AddMemoryCache() |> ignore
 
-    // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        services
+            .AddMvcCore(fun options ->
+                options.RequireHttpsPermanent <- true
+                options.RespectBrowserAcceptHeader <- true
+            )
+            .AddFormatterMappings()
+            .AddJsonFormatters()
+        |> ignore
+
     member this.Configure(app: IApplicationBuilder, env: IHostingEnvironment) =
         app.UseMvc() |> ignore
 

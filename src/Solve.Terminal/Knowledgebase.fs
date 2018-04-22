@@ -16,6 +16,8 @@ type IKnowledgebaseWrapper =
 type MutableKnowledgebase(initialKnowledgebase: Rule list) =
     let mutable innerKnowledgebase = initialKnowledgebase
 
+    member __.Rules = innerKnowledgebase
+
     interface IKnowledgebaseWrapper with
         member __.AddRule rule =
             innerKnowledgebase <- innerKnowledgebase @ [rule]

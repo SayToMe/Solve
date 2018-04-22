@@ -43,16 +43,22 @@ module TerminalRunners =
         )
         |> Seq.iter ignore
 
-    let consumeInput (terminal: ITerminal) (mode: TerminalMode) (input: string) =
-        let fullPlString = mode.AsString + input
-        match parsePlString fullPlString with
+    let getConsumedInput (terminal: ITerminal) (input: string) =
+        match parsePlString input with
         | RuleParseResult rule -> 
             terminal.Insert rule
+            Some (InfoLog (sprintf "%A" rule))
         | CallParseResult goal ->
-            let res = terminal.Solve (Goal(goal))
-            terminal.Log (ResultLog res)
+            let res = terminal.Solve (Goal(goal)) |> Seq.toList
+            Some (ResultLog res)
         | ParseError error ->
-            terminal.Log (ErrorLog error)
+            Some (ErrorLog error)
+
+    let consumeInput (terminal: ITerminal) (mode: TerminalMode) (input: string) =
+        let fullPlString = mode.AsString + input + "."
+        match getConsumedInput terminal fullPlString with
+        | Some(log) -> terminal.Log log
+        | None -> ()
 
     let run (terminal: ITerminal) (mode: TerminalMode) =
         match mode with
