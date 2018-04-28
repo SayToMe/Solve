@@ -2,7 +2,7 @@
 namespace System
 open System.Reflection
 
-[<assembly: AssemblyTitleAttribute("Solve.PrologParser")>]
+[<assembly: AssemblyTitleAttribute("Solve.Terminal")>]
 [<assembly: AssemblyProductAttribute("Solve")>]
 [<assembly: AssemblyDescriptionAttribute("Prolog F# implementation")>]
 [<assembly: AssemblyVersionAttribute("0.0.2")>]
@@ -11,7 +11,7 @@ open System.Reflection
 do ()
 
 module internal AssemblyVersionInformation =
-    let [<Literal>] AssemblyTitle = "Solve.PrologParser"
+    let [<Literal>] AssemblyTitle = "Solve.Terminal"
     let [<Literal>] AssemblyProduct = "Solve"
     let [<Literal>] AssemblyDescription = "Prolog F# implementation"
     let [<Literal>] AssemblyVersion = "0.0.2"

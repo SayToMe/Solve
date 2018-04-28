@@ -11,6 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Solve/Solve.fsproj" />
-    <ProjectReference Include="...Solve.PrologParser/Solve.PrologParser.fsproj" />
+    <ProjectReference Include="../Solve.PrologParser/Solve.PrologParser.fsproj" />
   </ItemGroup>
 </Project>

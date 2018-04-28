@@ -63,6 +63,7 @@ Global
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3BB74C4-B10B-4866-8DF3-11233F298795}.Release|Any CPU.Build.0 = Release|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39863437-1B0A-46C8-8E8D-103AB5CBC900}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -82,5 +83,44 @@ Global
 		{312C2CC4-7E30-48E7-820E-F00BBB7D8B2B} = {ED8079DD-2B06-4030-9F0F-DC548F98E1C4}
 		{A3BB74C4-B10B-4866-8DF3-11233F298795} = {DD1C30FE-4364-4D0C-A425-506DC69AFECF}
 		{3E88DF77-1127-4AAD-9B93-B52A3E1DE829} = {38DC74F4-EC02-4E64-A337-246970C9A5EC}
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = PrefixedHierarchical
+		$0.TextStylePolicy = $2
+		$2.FileWidth = 80
+		$2.TabsToSpaces = True
+		$2.scope = text/plain
+		$0.TextStylePolicy = $3
+		$3.inheritsSet = null
+		$3.scope = text/x-fsharp
+		$0.FSharpFormattingPolicy = $4
+		$4.DefaultFormat = $5
+		$5.IndentOnTryWith = True
+		$5.ReorderOpenDeclaration = True
+		$5.SpaceAfterComma = True
+		$5.SpaceAfterSemicolon = True
+		$5.SpaceAroundDelimiter = True
+		$5.SpaceBeforeArgument = True
+		$5.SpaceBeforeColon = True
+		$5.__added = 0
+		$4.scope = text/x-fsharp
+		$0.TextStylePolicy = $6
+		$6.inheritsSet = null
+		$6.scope = text/x-json
+		$0.JSONFormattingPolicy = $7
+		$7.AutoStructureCompletion = True
+		$7.BracePositions = SemiExpanded
+		$7.FormatOnPaste = True
+		$7.scope = text/x-json
+		$0.TextStylePolicy = $8
+		$8.inheritsSet = null
+		$8.scope = text/x-web
+		$0.TextStylePolicy = $9
+		$9.inheritsSet = null
+		$9.scope = text/x-vs
+		$0.StandardHeader = $10
+		$0.VersionControlPolicy = $11
 	EndGlobalSection
 EndGlobal
