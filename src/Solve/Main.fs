@@ -21,54 +21,54 @@ module Solve =
             |> Seq.filter (checkAppliable goal)
             |> Seq.collect (fun rule ->
                 let (GoalSignature(_, initialArgs)) = goal
-                let (Rule(Signature(_, prms), body)) = Option.get (unifyRule rule initialArgs)
+                let (Rule(Signature(_, parameters), body)) = Option.get (unifyRule rule initialArgs)
                 
                 let initialConreceteVariables =
-                    (fromArgs initialArgs, fromParams prms)
-                    ||> List.map2 (fun a p ->
-                        let rec getConcreteVars a p =
-                            match a, p with
+                    (fromArgs initialArgs, fromParams parameters)
+                    ||> List.map2 (fun argument parameter ->
+                        let rec getConcreteVars argument parameter =
+                            match argument, parameter with
                             | VariableTerm _, VariableTerm _ -> []
-                            | VariableTerm av, _ -> [av, p]
-                            | ListTerm l1, ListTerm l2 ->
-                                match l1, l2 with
-                                | TypedListTerm(h1, r1), TypedListTerm(h2, r2) ->
-                                    (getConcreteVars h1 h2) @ (getConcreteVars (ListTerm r1) (ListTerm r2))
-                                | VarListTerm(v1), NilTerm -> [v1, ListTerm(NilTerm)]
-                                | VarListTerm(v1), TypedListTerm(_,_) -> [v1, p]
+                            | VariableTerm leftVariable, _ -> [leftVariable, parameter]
+                            | ListTerm leftList, ListTerm rightList ->
+                                match leftList, rightList with
+                                | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+                                    (getConcreteVars leftTerm rightTerm) @ (getConcreteVars (ListTerm leftTail) (ListTerm rightTail))
+                                | VarListTerm(leftVariableListTerm), NilTerm -> [leftVariableListTerm, ListTerm(NilTerm)]
+                                | VarListTerm(leftVariableListTerm), TypedListTerm(_,_) -> [leftVariableListTerm, parameter]
                                 | _ -> []
                             | _ -> []
-                        getConcreteVars a p
-                    ) |> List.collect (fun x -> x)
+                        getConcreteVars argument parameter
+                    ) |> List.collect id
                 let initialUnconcreteVariables =
-                    (fromArgs initialArgs, fromParams prms)
-                    ||> List.map2 (fun a p ->
-                        match a, p with
-                        | VariableTerm av, VariableTerm pv -> Some (av, pv)
+                    (fromArgs initialArgs, fromParams parameters)
+                    ||> List.map2 (fun argument parameter ->
+                        match argument, parameter with
+                        | VariableTerm leftVariableTerm, VariableTerm rightVariableTerm -> Some (leftVariableTerm, rightVariableTerm)
                         | _ -> None
                     )
                     |> List.collect(Option.toList)
 
-                exExpr body executeCustom (fun v -> VariableTerm v)
+                exExpr body executeCustom VariableTerm
                 |> Seq.map (List.map (fun (changedVar, resTerm) ->
-                    match initialUnconcreteVariables |> List.tryFind (fun (_, p) -> p = changedVar) with
+                    match initialUnconcreteVariables |> List.tryFind (fun (_, parameter) -> parameter = changedVar) with
                     | Some (initialVar, _) -> Some(initialVar, resTerm)
                     | _ -> None
                 ) >> List.collect (Option.toList))
                 |> Seq.map (List.append initialConreceteVariables)
-                |> Seq.map (List.filter (fun vt -> 
-                    match vt with
-                    | (v1, VariableTerm(v2)) when v1 = v2 -> false
+                |> Seq.map (List.filter (fun variableTermPair -> 
+                    match variableTermPair with
+                    | (leftTerm, VariableTerm(rightVariableTerm)) when leftTerm = rightVariableTerm -> false
                     | _ -> true))
             )
             |> Seq.map (fun changes ->
                 let (GoalSignature(_, initialArgs)) = goal
                 initialArgs
-                |> List.map (fun (Argument(a)) ->
-                    match changes |> List.tryFind (fun (v, _) -> VariableTerm(v) = a) with
+                |> List.map (fun (Argument(argumentTerm)) ->
+                    match changes |> List.tryFind (fun (variable, _) -> VariableTerm(variable) = argumentTerm) with
                     | Some (_, res) -> res
-                    | None -> a
+                    | None -> argumentTerm
                 )
             )
 
-        exExpr goal executeCustom (fun v -> VariableTerm(v))
+        exExpr goal executeCustom VariableTerm

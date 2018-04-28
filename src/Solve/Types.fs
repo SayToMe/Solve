@@ -15,10 +15,10 @@ module TermTypes =
         member self.AsString =
             let rec formatTyped =
                 function
-                | TypedAtomTerm(AtomTerm v) -> v.ToString()
-                | TypedBoolTerm(BoolTerm v) -> v.ToString()
-                | TypedNumberTerm(NumberTerm v) -> v.ToString()
-                | TypedCharTerm(CharTerm v) -> v.ToString()
+                | TypedAtomTerm(AtomTerm atomTerm) -> atomTerm.ToString()
+                | TypedBoolTerm(BoolTerm boolTerm) -> boolTerm.ToString()
+                | TypedNumberTerm(NumberTerm numberTerm) -> numberTerm.ToString()
+                | TypedCharTerm(CharTerm charTerm) -> charTerm.ToString()
             formatTyped self
         override self.ToString() = self.AsString
 
@@ -34,7 +34,8 @@ module TermTypes =
             match self with
             | VariableTerm(Variable(v)) -> "~" + v + "~"
             | TypedTerm(typed) -> typed.AsString
-            | StructureTerm(Structure(functor', parameters)) -> functor' + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
+            | StructureTerm(Structure(functor', parameters)) ->
+                functor' + "(" + (parameters |> List.fold (fun acc p -> if acc = "" then p.AsString else acc + ", " + p.AsString) "") + ")"
             | ListTerm(x) -> x.AsString
         override self.ToString() = self.AsString
     and Structure = Structure of string * Term list
@@ -61,8 +62,7 @@ module TermTypes =
         let string = CharTerm >> TypedCharTerm >> TypedTerm
         
         [<DebuggerStepThrough>]
-        let var = 
-            Variable >> VariableTerm
+        let var = Variable >> VariableTerm
 
         [<DebuggerStepThrough>]
         let atom = AtomTerm >> TypedAtomTerm >> TypedTerm
