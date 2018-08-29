@@ -70,18 +70,26 @@ module TerminalRunners =
             try
                 terminal.Log (ModeLog mode)
 
-                match terminal.ReadInput() with
-                | "exit"
-                | "e"
-                | "q"
-                | "quit" -> Exit
-                | "?-"
-                | "query" -> Query
-                | ":-"
-                | "insert" -> Insert
-                | input ->
-                    consumeInput terminal mode input
-                    mode
+                match terminal.ReadKey() with
+                | k when k.Key = ConsoleKey.Tab ->
+                    terminal.Log (InfoLog "")
+                    match mode with
+                    | Insert -> Query
+                    | Query -> Insert
+                    | _ -> failwith "Shouldn't get there"
+                | k ->
+                    match k.KeyChar.ToString() + terminal.ReadInput() with
+                    | "exit"
+                    | "e"
+                    | "q"
+                    | "quit" -> Exit
+                    | "?-"
+                    | "query" -> Query
+                    | ":-"
+                    | "insert" -> Insert
+                    | input ->
+                        consumeInput terminal mode input
+                        mode
             with
             | _ as e ->
                 printfn "Failure. %A" e.Message

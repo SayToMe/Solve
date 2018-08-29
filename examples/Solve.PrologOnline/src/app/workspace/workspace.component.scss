@@ -1,0 +1,12 @@
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+app-command-history {
+  flex: 1 1;
+}
+
+app-command-line {
+  flex: 0 0 auto;
+}
