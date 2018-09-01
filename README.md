@@ -20,17 +20,15 @@ Features are going to be implemented:
 * Wild card
 
 TODO:
-Switch to .NET Core
 Unification shouldn't be one-directed
 
 ## Requirements
 
 Solve requires a local git installation. You can download git from [Git Downloads](https://git-scm.com/downloads).
 
-## Issues
+## Code coverage
 
-[![Issue Stats](http://issuestats.com/github/SayToMe/Solve/badge/issue)](http://issuestats.com/github/SayToMe/Solve)
-[![Issue Stats](http://issuestats.com/github/SayToMe/Solve/badge/pr)](http://issuestats.com/github/SayToMe/Solve)
+[![codecov](https://codecov.io/gh/SayToMe/Solve/branch/master/graph/badge.svg)](https://codecov.io/gh/SayToMe/Solve)
 
 ## Build Status
 
