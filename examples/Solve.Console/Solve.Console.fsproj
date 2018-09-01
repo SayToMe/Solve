@@ -11,5 +11,5 @@
     <ProjectReference Include="../../src/Solve.PrologParser/Solve.PrologParser.fsproj" />
     <ProjectReference Include="../../src/Solve.Terminal/Solve.Terminal.fsproj" />
   </ItemGroup>
-  <Import Project="../../.paket/Paket.Restore.targets" />
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

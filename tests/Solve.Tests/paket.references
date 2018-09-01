@@ -1,4 +1,6 @@
 FSharp.Core
+coverlet.msbuild
+dotnet-reportgenerator-cli
 group Test
 NUnit
 NUnit.Runners
