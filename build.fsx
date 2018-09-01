@@ -159,8 +159,18 @@ Target "RunTests" (fun _ ->
                 TimeOut = TimeSpan.FromMinutes 20.
                 Framework = testFramework
                 Project = testAssembly
+                AdditionalArgs = [ "/p:CollectCoverage=true"; "/p:CoverletOutputFormat=opencover" ]
             }
         )
+)
+
+Target "CoverageReport" (fun _ ->
+    DotNetCli.RunCommand (fun p ->
+            { p with
+                TimeOut = TimeSpan.FromMinutes 20.
+                WorkingDir = "tests/Solve.Tests"
+            }
+        ) "reportgenerator -reports:coverage.opencover.xml -targetdir:coveragereport -reporttypes:HTML;Badges"
 )
 
 // --------------------------------------------------------------------------------------
@@ -361,6 +371,7 @@ Target "All" DoNothing
   ==> "Build"
   ==> "CopyBinaries"
   ==> "RunTests"
+  ==> "CoverageReport"
   ==> "GenerateReferenceDocs"
   ==> "GenerateDocs"
   ==> "NuGet"

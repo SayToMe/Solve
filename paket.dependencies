@@ -8,9 +8,13 @@ source https://nuget.org/api/v2
 # To increase the minimum assumed F# version to F# 4.1, change to 
 #     nuget FSharp.Core ~> 4.1.0 redirects: force
 
+nuget coverlet.msbuild
+nuget dotnet-reportgenerator-cli
 nuget FParsec
 nuget FParsecCs
 nuget FSharp.Core ~> 4.3.0.0 redirects: force
+nuget OpenCover
+nuget ReportGenerator
 
 group Build
   source https://nuget.org/api/v2
