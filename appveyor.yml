@@ -1,7 +1,10 @@
 init:
   - git config --global core.autocrlf input
+  - choco install codecov
 build_script:
   - cmd: build.cmd All
+after_build:
+  - codecov -f "tests/Solve.Tests/coverage.opencover.xml"
 image: Visual Studio 2017
 test: off
 version: 0.0.1.{build}
