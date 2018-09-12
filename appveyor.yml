@@ -1,6 +1,7 @@
 init:
   - git config --global core.autocrlf input
   - choco install codecov
+  - choco install fake
 build_script:
   - cmd: build.cmd All
 after_build:
