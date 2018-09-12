@@ -32,6 +32,12 @@ module PrimitivesTests =
     open Solve.PrologParser.Primitives
 
     [<Test; MemoryReport>]
+    let parseSkipWs() = testRun ws "23" |> checkSuccess ()
+
+    [<Test; MemoryReport>]
+    let parseSkipWs2() = testRun ws "    23    " |> checkSuccess ()
+
+    [<Test; MemoryReport>]
     let parseNumTerm() = testRun pterm "23" |> checkSuccess (num 23.)
     
     [<Test; MemoryReport>]

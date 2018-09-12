@@ -43,7 +43,10 @@ module VariableUnify =
                 | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) -> 
                     unifyRightToConcreteLeft leftTerm rightTerm
                     |> Option.bind (fun unifiedTerm ->
-                        let concatListTerm (ListTerm(r)) = Some(ListTerm(TypedListTerm(unifiedTerm, r)))
+                        let concatListTerm =
+                            function
+                            | ListTerm(r) -> Some(ListTerm(TypedListTerm(unifiedTerm, r)))
+                            | _ -> failwith "List term"
                         unifyRightToConcreteLeft (ListTerm leftTail) (ListTerm rightTail) |> Option.bind concatListTerm)
                 | _ -> None
             | _ -> None

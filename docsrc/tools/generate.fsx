@@ -30,9 +30,11 @@ let info =
 #load "../../packages/build/FSharp.Formatting/FSharp.Formatting.fsx"
 #I "../../packages/build/FAKE/tools/"
 #r "FakeLib.dll"
-open Fake
 open System.IO
-open Fake.FileHelper
+open Fake
+open Fake.Core
+open Fake.IO
+open Fake.IO.FileSystemOperators
 open FSharp.Literate
 open FSharp.MetadataFormat
 
@@ -57,7 +59,7 @@ let docTemplate = "docpage.cshtml"
 let layoutRootsAll = new System.Collections.Generic.Dictionary<string, string list>()
 layoutRootsAll.Add("en",[ templates; formatting @@ "templates"
                           formatting @@ "templates/reference" ])
-subDirectories (directoryInfo templates)
+DirectoryInfo.getSubDirectories (DirectoryInfo templates)
 |> Seq.iter (fun d ->
                 let name = d.Name
                 if name.Length = 2 || name.Length = 3 then
@@ -68,10 +70,10 @@ subDirectories (directoryInfo templates)
 
 // Copy static files and CSS + JS from F# Formatting
 let copyFiles () =
-  CopyRecursive files output true |> Log "Copying file: "
-  ensureDirectory (output @@ "content")
-  CopyRecursive (formatting @@ "styles") (output @@ "content") true 
-    |> Log "Copying styles and scripts: "
+  DirectoryInfo.copyRecursiveTo true (DirectoryInfo output) (DirectoryInfo files) |> Trace.logItems "Copying file: "
+  Directory.ensure (output @@ "content")
+  DirectoryInfo.copyRecursiveTo true (DirectoryInfo <| output @@ "content") (DirectoryInfo <| formatting @@ "styles")
+    |> Trace.logItems "Copying styles and scripts: "
 
 let binaries =
     let manuallyAdded = 
@@ -79,8 +81,8 @@ let binaries =
         |> List.map (fun b -> bin @@ b)
     
     let conventionBased = 
-        directoryInfo bin 
-        |> subDirectories
+        DirectoryInfo bin
+        |> DirectoryInfo.getSubDirectories
         |> Array.map (fun d -> d.FullName @@ (sprintf "%s.dll" d.Name))
         |> List.ofArray
 
@@ -88,8 +90,8 @@ let binaries =
 
 let libDirs =
     let conventionBasedbinDirs =
-        directoryInfo bin 
-        |> subDirectories
+        DirectoryInfo bin 
+        |> DirectoryInfo.getSubDirectories
         |> Array.map (fun d -> d.FullName)
         |> List.ofArray
 
@@ -97,7 +99,7 @@ let libDirs =
 
 // Build API reference from XML comments
 let buildReference () =
-  CleanDir (output @@ "reference")
+  Shell.cleanDir (output @@ "reference")
   MetadataFormat.Generate
     ( binaries, output @@ "reference", layoutRootsAll.["en"],
       parameters = ("root", root)::info,
