@@ -3,7 +3,7 @@ init:
   - choco install codecov
   - choco install fake
 build_script:
-  - cmd: build.cmd All
+  - cmd: build.cmd
 after_build:
   - codecov -f "tests/Solve.Tests/coverage.opencover.xml"
 image: Visual Studio 2017
