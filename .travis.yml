@@ -1,6 +1,6 @@
 language: csharp
 dotnet: 2.1.300
-mono: 5.12.0
+mono: 4.5
 dist: trusty
 
 sudo: false  # use the new container-based Travis infrastructure 

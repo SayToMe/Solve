@@ -6,5 +6,5 @@
 set -eu
 set -o pipefail
 
-dotnet restore
-fake build $@
+dotnet restore build.proj
+fake -v build $@

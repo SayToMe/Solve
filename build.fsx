@@ -103,7 +103,7 @@ Target.create "AssemblyInfo" (fun _ ->
 
     !! "src/**/*.??proj"
     |> Seq.map getProjectDetails
-    |> Seq.iter (fun (projFileName, projectName, folderName, attributes) ->
+    |> Seq.iter (fun (projFileName, _, folderName, attributes) ->
         match projFileName with
         | Fsproj -> AssemblyInfoFile.createCSharp (folderName </> "AssemblyInfo.fs") attributes
         | Csproj -> AssemblyInfoFile.createCSharp ((folderName </> "Properties") </> "AssemblyInfo.cs") attributes
@@ -231,9 +231,9 @@ let githubLink = "https://github.com/saytome/solve"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "##ProjectName##"
-    "project-author", "##Author##"
-    "project-summary", "##Summary##"
+  [ "project-name", project
+    "project-author", authors |> Seq.head
+    "project-summary", summary
     "project-github", githubLink
     "project-nuget", "http://nuget.org/packages/Solve" ]
 
@@ -246,45 +246,47 @@ layoutRootsAll.Add("en",[   templates;
                             formatting @@ "templates"
                             formatting @@ "templates/reference" ])
 
-Target.create "ReferenceDocs" (fun _ ->
-    Directory.ensure (output @@ "reference")
+// Target.create "ReferenceDocs" (fun _ ->
+//     Directory.ensure (output @@ "reference")
 
-    let binaries () =
-        let manuallyAdded =
-            referenceBinaries
-            |> List.map (fun b -> bin @@ b)
+//     let binaries () =
+//         let manuallyAdded =
+//             referenceBinaries
+//             |> List.map (fun b -> bin @@ b)
 
-        let conventionBased =
-            DirectoryInfo.getSubDirectories <| DirectoryInfo bin
-            |> Array.collect (fun d ->
-                let name, dInfo =
-                    let net45Bin =
-                        DirectoryInfo.getSubDirectories d |> Array.filter(fun x -> x.FullName.ToLower().Contains("net45"))
-                    let net47Bin =
-                        DirectoryInfo.getSubDirectories d |> Array.filter(fun x -> x.FullName.ToLower().Contains("net47"))
-                    if net45Bin.Length > 0 then
-                        d.Name, net45Bin.[0]
-                    else
-                        d.Name, net47Bin.[0]
+//         let conventionBased =
+//             DirectoryInfo bin
+//             |> DirectoryInfo.getSubDirectories
+//             |> Array.collect (fun d ->
+//                 let opt =
+//                     let frameworks = ["net45";"net47";"netstandard2.0";"netcoreapp2.0"]
 
-                dInfo.GetFiles()
-                |> Array.filter (fun x ->
-                    x.Name.ToLower() = (sprintf "%s.dll" name).ToLower())
-                |> Array.map (fun x -> x.FullName)
-                )
-            |> List.ofArray
+//                     frameworks
+//                     |> List.map (fun f -> f, DirectoryInfo.getSubDirectories d |> Array.filter(fun x -> x.FullName.ToLower().Contains(f)))
+//                     |> List.filter (fun (_, d) -> d.Length > 0)
+//                     |> fun l -> if l.Length > 0 then Some l.Head else None
 
-        conventionBased @ manuallyAdded
+//                 opt
+//                 |> Option.map (fun (name, dInfo) ->
+//                     dInfo
+//                     |> Array.collect (fun d -> d.GetFiles())
+//                     |> Array.filter (fun x ->
+//                         x.Name.ToLower() = (sprintf "%s.dll" name).ToLower())
+//                     |> Array.map (fun x -> x.FullName))
+//                 |> Option.defaultValue Array.empty)
+//             |> List.ofArray
 
-    binaries()
-    |> FSFormatting.createDocsForDlls (fun args ->
-        { args with
-            OutputDirectory = output @@ "reference"
-            LayoutRoots =  layoutRootsAll.["en"]
-            ProjectParameters =  ("root", root)::info
-            SourceRepository = githubLink @@ "tree/master" }
-           )
-)
+//         conventionBased @ manuallyAdded
+
+//     binaries()
+//     |> FSFormatting.createDocsForDlls (fun args ->
+//         { args with
+//             OutputDirectory = output @@ "reference"
+//             LayoutRoots =  layoutRootsAll.["en"]
+//             ProjectParameters =  ("root", root)::info
+//             SourceRepository = githubLink @@ "tree/master" }
+//            )
+// )
 
 let copyFiles () =
     Shell.copyRecursive files output true
@@ -359,7 +361,7 @@ Target.create "All" ignore
   ==> "CopyBinaries"
   ==> "RunTests"
   ==> "CoverageReport"
-  ==> "GenerateDocs"
+//   ==> "GenerateDocs"
   ==> "NuGet"
   ==> "BuildPackage"
   ==> "All"
@@ -368,7 +370,7 @@ Target.create "All" ignore
 
 "CleanDocs"
   ==>"Docs"
-  ==> "ReferenceDocs"
+//   ==> "ReferenceDocs"
   ==> "GenerateDocs"
 
 "Clean"

@@ -1,6 +1,6 @@
 @echo off
 cls
 
-dotnet restore
+dotnet restore build.proj
 
 fake build %*
