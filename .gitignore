@@ -191,6 +191,7 @@ docsrc/tools/FSharp.Formatting.svclog
 .idea/.idea.Solve/.idea/workspace.xml
 .idea/.idea.Solve/riderModule.iml
 
+docs/
 tests/Solve.Tests/coveragereport/
 tests/Solve.Tests/report/
 tests/Solve.Tests/coverage.*

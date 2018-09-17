@@ -43,7 +43,7 @@
     <Content Remove="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.5.2" />
+    <PackageReference Include="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
