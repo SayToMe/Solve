@@ -2,5 +2,4 @@
 cls
 
 dotnet restore build.proj
-
-fake build %*
+dotnet fake build %*
