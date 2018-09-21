@@ -68,6 +68,12 @@ module TermTypes =
         let atom = AtomTerm >> TypedAtomTerm >> TypedTerm
         
         [<DebuggerStepThrough>]
+        let numList =
+            List.rev
+            >> List.fold (fun st t -> TypedListTerm(num t, st)) NilTerm
+            >> ListTerm
+        
+        [<DebuggerStepThrough>]
         let rec stringList (str: string) = 
             let rec strImpl idx =
                 if idx >= str.Length then
