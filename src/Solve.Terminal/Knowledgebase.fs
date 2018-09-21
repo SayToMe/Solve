@@ -28,7 +28,7 @@ type IKnowledgebaseWrapper =
     abstract member AddRule: Rule -> unit
     abstract member Solve: Goal -> string seq
    
-type MutableKnowledgebase(initialKnowledgebase: Rule list) as self =
+type MutableKnowledgebase(initialKnowledgebase: Rule list) =
     let mutable innerKnowledgebase = initialKnowledgebase
 
     member __.Rules = innerKnowledgebase

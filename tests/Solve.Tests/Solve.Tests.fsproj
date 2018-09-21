@@ -3,12 +3,12 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <FSharpCoreImplicitPackageVersion>4.5.2</FSharpCoreImplicitPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="dotnet-reportgenerator-cli" Version="4.0.0-rc4" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ParsedTests.fs" />
     <None Include="paket.references" />
     <Compile Include="Tests.fs" />
     <Compile Include="ParsePrimitivesTests.fs" />
