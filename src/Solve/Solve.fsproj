@@ -2,7 +2,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <FSharpCoreImplicitPackageVersion>4.3.4</FSharpCoreImplicitPackageVersion>
   </PropertyGroup>
   <PropertyGroup>
     <Title>Solve</Title>
