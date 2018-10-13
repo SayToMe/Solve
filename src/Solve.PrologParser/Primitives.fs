@@ -10,8 +10,8 @@ open Solve.TermTypes
 open Solve.Rule
 
 type ParseResult =
-    | RuleParseResult of Rule
-    | CallParseResult of Expression
+    | DefinitionParseResult of Rule
+    | SearchParseResult of Expression
     | ParseError of string
 
 module Primitives =
@@ -82,7 +82,7 @@ module Primitives =
 
     let pfact = psignature .>> pstring "." |>> (fun s -> Rule(s, True))
 
-    let pbody =
+    let pexpr =
         let pcalc =
             let rec _pcalc () =
                 let pval = attempt <| (pterm .>> ws) |>> Value
@@ -118,11 +118,12 @@ module Primitives =
             (pinnerExpr () <|> singleExpression)
 
         attempt <| (_pbody () .>> ws)
-    
+
+    let pbody = pexpr
     let prule = pipe4 psignature (pstring ":-" .>> ws) (pbody .>> ws) (pstring ".") (fun signature _ body _ -> Rule(signature, body))
 
-    let pdef = (pstring ":-" .>> ws) >>. (attempt pfact <|> attempt prule) |>> RuleParseResult
+    let pdef = (pstring ":-" .>> ws) >>. (attempt pfact <|> attempt prule) |>> DefinitionParseResult
 
-    let pquery = (pstring "?-" .>> ws) >>. psignature .>> (pstring ".") |>> (fun (Signature(n, l)) -> CallParseResult(CallExpression(GoalSignature(n, toArgs <| fromParams l))))
+    let pquery = (pstring "?-" .>> ws) >>. pbody .>> (pstring ".") |>> SearchParseResult
 
     let pcommand: Parser<ParseResult, unit> = (attempt pquery) <|> (attempt pdef)

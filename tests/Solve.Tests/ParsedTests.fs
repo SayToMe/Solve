@@ -16,13 +16,21 @@ open ExpressionUnify
 open System
 open Solve.Terminal
 
-let (|>>) terminal input =
-    consumeInput terminal TerminalMode.Insert input
-    terminal
+let (|->) terminal input =
+    try
+        consumeInput terminal TerminalMode.Insert input
+        terminal
+    with
+    | e -> Assert.Fail(sprintf "Exception while consuming input: %s" e.Message)
+           terminal
 
 let (|?>) terminal input =
-    consumeInput terminal TerminalMode.Query input
-    terminal
+    try
+        consumeInput terminal TerminalMode.Query input
+        terminal
+    with
+    | e -> Assert.Fail(sprintf "Exception while consuming input: %s" e.Message)
+           terminal
 
 type TestTerminal() as self =
     let kb: IKnowledgebaseWrapper = MutableKnowledgebase([]) :> IKnowledgebaseWrapper
@@ -56,19 +64,23 @@ let checkOutput expected (terminal: TestTerminal) =
     Assert.AreEqual(terminal.Output, expected, sprintf "%O != %O" expected terminal.Output)
 
 let expectedResult expected (terminal: TestTerminal) =
-    let expected = expected |> convertSolveResult |> terminal.GetResults
-    let actual = terminal.Output
-    Assert.AreEqual(actual, expected, sprintf "%O != %O" expected actual)
-    terminal.ResetOutput()
-    terminal
+    try
+        let expected = expected |> convertSolveResult |> terminal.GetResults
+        let actual = terminal.Output
+        Assert.AreEqual(actual, expected, sprintf "%O != %O" expected actual)
+        terminal.ResetOutput()
+        terminal
+    with
+        | e -> Assert.Fail(sprintf "Thrown exception %s" e.Message)
+               terminal
 
 [<TestFixture>]
 module ParsedFactorialTests =
     [<Test>]
     let ``Check facts test``() =
         TestTerminal()
-        |>> "fact(1, 1)."
-        |>> "fact(X, R):- X > 1, X1 is X - 1, fact(X1, R1), R is R1 * X."
+        |-> "fact(1, 1)."
+        |-> "fact(X, R):- X > 1, X1 is X - 1, fact(X1, R1), R is R1 * X."
         |?> "fact(1, X)."
         |> expectedResult [[(Variable "X", num 1.)]]
         |?> "fact(2, X)."
@@ -84,8 +96,8 @@ module ParsedFactTests =
     [<Test>]
     let ``Check facts test``() =
         TestTerminal()
-        |>> "test(1)."
-        |>> "test(2)."
+        |-> "test(1)."
+        |-> "test(2)."
         |?> "test(X)."
         |> expectedResult [[(Variable "X", num 1.)]; [(Variable "X", num 2.)]]
         |> ignore
@@ -94,16 +106,18 @@ module ParsedFactTests =
 module ParsedListTests =
     let insertHeadRule terminal =
         terminal
-        |>> "head(H, L) :- [H | R] = L"
+        //|-> "head(H, L) :- [H | R] = L."
+        |-> "head(X, [X | T])."
         
     let insertTailRule terminal =
         terminal
-        |>> "tail(T, L) :- [T1 | T] = L" // Could be used with wildcard variable
+        //|-> "tail(T, L) :- [T1 | T] = L." // Could be used with wildcard variable
+        |-> "tail(T, [X | T])."
         
     let insertMemberRule terminal =
         terminal
-        |>> "member(E, L) :- head(E, L)."
-        |>> "member(E, L) :- tail(T, L), member(E, T)."
+        |-> "member(E, L) :- head(E, L)."
+        |-> "member(E, L) :- tail(T, L), member(E, T)."
         
     [<Test>]
     let ``Check head on empty list test``() =
@@ -183,4 +197,37 @@ module ParsedListTests =
         |> insertMemberRule
         |?> "member(2, [1, 2])."
         |> expectedResult [[]]
+        |> ignore
+        
+    [<Test>]
+    let ``Check member on list with replacement test 1``() =
+        TestTerminal()
+        |> insertHeadRule
+        |> insertTailRule
+        |> insertMemberRule
+        |-> "list([1, 2])."
+        |?> "L = [1, 2], member(2, L)."
+        |> expectedResult [[(Variable "L", numList [1.; 2.])]]
+        |> ignore
+        
+    [<Test>]
+    let ``Check member on list with replacement test 2``() =
+        TestTerminal()
+        |> insertHeadRule
+        |> insertTailRule
+        |> insertMemberRule
+        |-> "list([1, 2])."
+        |?> "list(L), member(2, L)."
+        |> expectedResult [[(Variable "L", numList [1.; 2.])]]
+        |> ignore
+
+    [<Test>]
+    let ``Check member on list with replacement test 3``() =
+        TestTerminal()
+        |> insertHeadRule
+        |> insertTailRule
+        |> insertMemberRule
+        |-> "list([1, 2])."
+        |?> "member(2, L), list(L)."
+        |> expectedResult [[(Variable "L", numList [1.; 2.])]]
         |> ignore

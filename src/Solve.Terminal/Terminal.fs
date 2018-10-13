@@ -45,10 +45,10 @@ module TerminalRunners =
 
     let getConsumedInput (terminal: ITerminal) (input: string) =
         match parsePlString input with
-        | RuleParseResult rule -> 
+        | DefinitionParseResult rule -> 
             terminal.Insert rule
             Some (InfoLog (sprintf "%A" rule))
-        | CallParseResult goal ->
+        | SearchParseResult goal ->
             let res = terminal.Solve (Goal(goal)) |> Seq.toList
             Some (ResultLog res)
         | ParseError error ->

@@ -48,6 +48,13 @@ module TermTypes =
             | TypedListTerm(head, rest) -> "[" + head.AsString + "," + (ListTerm(rest)).AsString
         override self.ToString() = self.AsString
 
+    module Helpers =
+        [<DebuggerStepThrough>]
+        let isVariable =
+            function
+            | VariableTerm _ -> true
+            | _ -> false
+
     module Transformers =
         [<DebuggerStepThrough>]
         let bool = BoolTerm >> TypedBoolTerm >> TypedTerm

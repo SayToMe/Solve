@@ -150,7 +150,7 @@ module ExpressionUnify =
 
             unifyParametersWithArguments parameters arguments
             |> Option.bind (fun unifiedArgs ->
-                let newExpr = 
+                let newExpr =
                     List.zip parameters unifiedArgs
                     |> List.fold (fun acc (parameter, unifiedArg) -> unifyExpression acc (changeVariable parameter unifiedArg)) expression
                 (newExpr, unifiedArgs)
