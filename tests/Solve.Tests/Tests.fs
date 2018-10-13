@@ -92,7 +92,37 @@ module SimpleTests =
     let testUnifyRule() = 
         unifyRule (RULE (SIGNATURE "eq1" [var "N"]) (EqExpr(var "N", num 1.))) (toArgs [num 1.])
         |> check (Some(RULE (SIGNATURE "eq1" [num 1.]) (EqExpr(num 1., num 1.))))
-    
+
+    [<Test>]
+    let ``Given eq(X, X) call with eq(1, X) should return eq(1, 1)``() = 
+        unifyRule (RULE (SIGNATURE "eq" [var "X"; var "X"]) True) (toArgs [num 1.; var "X"])
+        |> check (Some(RULE (SIGNATURE "eq" [num 1.; num 1.]) True))
+
+    [<Test>]
+    let ``Given eq(X, X) call with eq(X, 1) should return eq(1, 1)``() = 
+        unifyRule (RULE (SIGNATURE "eq" [var "X"; var "X"]) True) (toArgs [var "X"; num 1.])
+        |> check (Some(RULE (SIGNATURE "eq" [num 1.; num 1.]) True))
+
+    [<Test>]
+    let ``Given eq(X, X) call with eq(1, 2) should return None``() = 
+        unifyRule (RULE (SIGNATURE "eq" [var "X"; var "X"]) True) (toArgs [num 1.; num 2.])
+        |> check None
+
+    [<Test>]
+    let ``Given eq(X, X) call with eq([1, 2], [1, X]) should return eq([1, 2], [1, 2])``() = 
+        unifyRule (RULE (SIGNATURE "eq" [var "X"; var "X"]) True) (toArgs [numList [1.; 2.]; ListTerm(TypedListTerm(num 1., TypedListTerm(var "X", NilTerm)))])
+        |> check (Some(RULE (SIGNATURE "eq" [numList [1.; 2.]; numList [1.; 2.]]) True))
+        
+    [<Test>]
+    let ``Given head(X, [X | T]) call with head(X, [1, 2]) should return head(1, [1, 2])``() = 
+        unifyRule (RULE (SIGNATURE "head" [var "X"; ListTerm(TypedListTerm(var "X", VarListTerm(Variable "T")))]) True) (toArgs [var "X"; numList [1.; 2.]])
+        |> check (Some(RULE (SIGNATURE "head" [num 1.; numList [1.; 2.]]) True))
+
+    [<Test>]
+    let ``Given head([X | T], X) call with head([1, 2], X) should return head([1, 2], 1)``() = 
+        unifyRule (RULE (SIGNATURE "head" [ListTerm(TypedListTerm(var "X", VarListTerm(Variable "T"))); var "X"]) True) (toArgs [numList [1.; 2.]; var "X"])
+        |> check (Some(RULE (SIGNATURE "head" [numList [1.; 2.]; num 1.]) True))
+
     open Execute
 
     [<Test>]
@@ -240,6 +270,24 @@ module SimpleTests =
             |> checkSolve [[Variable "Res", num (f n)]]
 
         [1..10] |> List.iter (float >> checkf)
+
+    [<Test>]
+    let ``Given equals(X, X). Query equals(X, 1) should return X = 1.``() =
+        let head = RULE (SIGNATURE "equals" [var "X"; var "X"]) True
+        solve (GOAL "equals" [var "X"; num 1.]) [head]
+        |> checkSolve [[Variable "X", num 1.]]
+
+    [<Test>]
+    let listHeadPredefinedTest() =
+        let head = RULE (SIGNATURE "head" [var "X"; ListTerm(TypedListTerm(var "X", VarListTerm(Variable "Y")))]) True
+        solve (GOAL "head" [num 1.; numList [1.; 2.; 3.]]) [head]
+        |> checkSolve [[]]
+
+    [<Test>]
+    let listHeadQueryTest() =
+        let head = RULE (SIGNATURE "head" [var "X"; ListTerm(TypedListTerm(var "X", VarListTerm(Variable "Y")))]) True
+        solve (GOAL "head" [var "X"; numList [1.; 2.; 3.]]) [head]
+        |> checkSolve [[Variable "X", num 1.]]
 
 [<TestFixture>]
 module RuleTests =
