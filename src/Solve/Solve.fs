@@ -7,8 +7,10 @@ open Rule.Transformers
 
 open VariableUnify
 open Execute
+open System.Runtime.CompilerServices
 
 module Solve =
+    open System
     open ExpressionUnify
 
     let private checkAppliable (GoalSignature(name, goalArguments)) (Rule(Signature(ruleName, ruleParams), _)) =

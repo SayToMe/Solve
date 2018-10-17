@@ -29,6 +29,9 @@
     <DocumentationFile>bin\Debug\netstandard2.0\Solve.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Script.fsx" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="paket.references" />
     <None Include="paket.template" />
     <Content Include="App.config" />
@@ -37,8 +40,7 @@
     <Compile Include="VariableUnify.fs" />
     <Compile Include="ExpressionUnify.fs" />
     <Compile Include="Execute.fs" />
-    <None Include="Script.fsx" />
-    <Compile Include="Main.fs" />
+    <Compile Include="Solve.fs" />
   </ItemGroup>
   <ItemGroup>
     <Content Remove="App.config" />

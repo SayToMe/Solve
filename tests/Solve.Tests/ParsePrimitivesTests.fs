@@ -16,6 +16,8 @@ open Rule.Transformers
 open Solve.PrologParser
 open Solve.PrologParser.Parser
 
+open Solve.Tests.Common
+
 open FParsec
 
 let inline parse str = parsePlString str
