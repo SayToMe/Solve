@@ -17,6 +17,8 @@ open Solve.PrologParser.Parser
 
 open Solve.PrimitivesTests
 
+open Solve.Tests.Common
+
 [<TestFixture>]
 module ParserTests =
     let checkParseFailure given =

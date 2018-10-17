@@ -1,6 +1,0 @@
-﻿#load "Types.fs"
-#load "Rule.fs"
-#load "VariableUnify.fs"
-#load "ExpressionUnify.fs"
-#load "Execute.fs"
-#load "Main.fs"
