@@ -116,8 +116,8 @@ module ParsedListTests =
         
     let insertMemberRule terminal =
         terminal
-        |-> "member(E, L) :- head(E, L)."
-        |-> "member(E, L) :- tail(T, L), member(E, T)."
+//        |-> "member(E, L) :- head(E, L)."
+//        |-> "member(E, L) :- tail(T, L), member(E, T)."
         
     [<Test>]
     let ``Check head on empty list test``() =

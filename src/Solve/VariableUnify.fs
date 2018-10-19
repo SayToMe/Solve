@@ -16,7 +16,7 @@ module VariableUnify =
     open Rule
     open Rule
 
-    let rec private changeVariablesRecursive (changeVariable: Variable -> Term) =
+    let rec changeVariablesRecursive (changeVariable: Variable -> Term) =
         function 
         | VariableTerm(variable) -> changeVariable variable
         | StructureTerm(Structure(functor', prms)) ->
@@ -34,29 +34,10 @@ module VariableUnify =
                 | ListTerm(changedTail) -> ListTerm(TypedListTerm(changeVariablesRecursive changeVariable head, changedTail))
                 | _ -> failwith ""
         | t -> t
-        
-    let changeVariablesForStruct (changeVariable: Variable -> Term) (structure: Structure) =
-        match changeVariablesRecursive changeVariable (StructureTerm(structure)) with 
-        | StructureTerm(s) -> s
-        | _ -> failwith ""
-
-    let rec changeVariablesForList (changeVariable: Variable -> Term) (list: TypedListTerm) =
-        match changeVariablesRecursive changeVariable (ListTerm(list)) with 
-        | ListTerm(l) -> l
-        | _ -> failwith ""
 
     type Source = Source of Term
     type Dest = Dest of Term
     type Unified = Unified of Term
-
-    /// 
-    /// 
-    /// 
-    /// 
-    /// 
-    /// 
-    /// 
-    /// 
 
     /// Source -> Dest
     /// 1 -> 1 => 1
@@ -109,9 +90,6 @@ module VariableUnify =
         match destTerm, unifiedDestTerm with 
         | VariableTerm(v), VariableTerm(v2) ->
             if v <> v2 then
-                // failwith "Unexpected variable name for unified dest term"
-//                let (Variable(v), Variable(v2)) = v, v2
-//                Some (VariableTerm (Variable (v + "_" + v2)))
                 Some unifiedDestTerm
             else
                 Some term

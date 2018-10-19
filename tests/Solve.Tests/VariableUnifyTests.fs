@@ -82,6 +82,21 @@ module VariableUnifyTests =
             |> checkUnifyTerms (Some (anyList [num 1.; var "X"; num 3.]))
     
         [<Test>]
+        let ``Given [X; X; X] unify with [A; B; C] should return [A; A; A]``() =
+            unifyTerms (anyList [var "X"; var "X"; var "X"]) (anyList [var "A"; var "B"; var "C"])
+            |> checkUnifyTerms (Some (anyList [var "A"; var "A"; var "A"]))
+    
+        [<Test>]
+        let ``Given  [A; B; C] unify with [X; X; X] should return [X; X; X]``() =
+            unifyTerms (anyList [var "A"; var "B"; var "C"]) (anyList [var "X"; var "X"; var "X"])
+            |> checkUnifyTerms (Some (anyList [var "X"; var "X"; var "X"]))
+    
+        [<Test>]
+        let ``Given  [1; B; C] unify with [X; X; X] should return [1; 1; 1]``() =
+            unifyTerms (anyList [num 1.; var "B"; var "C"]) (anyList [var "X"; var "X"; var "X"])
+            |> checkUnifyTerms (Some (anyList [num 1.; num 1.; num 1.]))
+    
+        [<Test>]
         let ``Given [] unify with [1 | X] should return None``() =
             unifyTerms (anyList []) (anyListVar [num 1.] "X")
             |> checkUnifyTerms (None)
@@ -135,8 +150,8 @@ module VariableUnifyTests =
         [<Test>]
         let ``Given test(N1, N, N) with N -> 1 should return test(N1, 1, 1)``() =
             let changeVariable = getChangeVariableFunction "N" 1.
-            VariableUnify.changeVariablesForStruct changeVariable (Structure("test", [var "N1"; var "N"; var "N"]))
-            |> check (Structure("test", [var "N1"; num 1.; num 1.]))
+            VariableUnify.changeVariablesRecursive changeVariable (anyStruct "test" [var "N1"; var "N"; var "N"])
+            |> check (anyStruct "test" [var "N1"; num 1.; num 1.])
             
     module UnifyParametersWithArguments =
         [<Test>]

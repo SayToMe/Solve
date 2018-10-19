@@ -14,7 +14,7 @@ module ExpressionUnify =
             function
             | Value(VariableTerm(variableTerm)) -> Value(changeVariable variableTerm)
             | Value(TypedTerm(typedTerm)) -> Value(TypedTerm(typedTerm))
-            | Value(StructureTerm(structureTerm)) -> Value(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
+            | Value(StructureTerm(structureTerm) as term) -> Value(changeVariablesRecursive changeVariable term)
             | _ as calc -> unifyCalc changeVariable calc
         match calc with
         | Plus (leftOp, rightOp) -> Plus(changeCalcTermIfVariable leftOp, changeCalcTermIfVariable rightOp)
@@ -32,12 +32,12 @@ module ExpressionUnify =
             match (leftTerm, rightTerm) with
             | (VariableTerm(leftVarTerm), VariableTerm(rightVarTerm)) -> functor'(procVariableChange leftVarTerm, procVariableChange rightVarTerm)
             | (VariableTerm(leftVarTerm), TypedTerm(_)) -> functor'(procVariableChange leftVarTerm, rightTerm)
-            | (VariableTerm(leftVarTerm), StructureTerm(rightStructureTerm)) -> functor'(procVariableChange leftVarTerm, StructureTerm(changeVariablesForStruct procVariableChange rightStructureTerm))
-            | (VariableTerm(leftVarTerm), ListTerm(rightListTerm)) -> functor'(procVariableChange leftVarTerm, ListTerm(changeVariablesForList procVariableChange rightListTerm))
+            | (VariableTerm(leftVarTerm), (StructureTerm(_) as rightStructureTerm)) -> functor'(procVariableChange leftVarTerm, changeVariablesRecursive procVariableChange rightStructureTerm)
+            | (VariableTerm(leftVarTerm), (ListTerm(_) as rightListTerm)) -> functor'(procVariableChange leftVarTerm, changeVariablesRecursive procVariableChange rightListTerm)
             | (TypedTerm(_), VariableTerm(rightVarTerm)) -> functor'(leftTerm, procVariableChange rightVarTerm)
-            | (StructureTerm(leftStructureTerm), VariableTerm(rightVarTerm)) -> functor'(StructureTerm(changeVariablesForStruct procVariableChange leftStructureTerm), procVariableChange rightVarTerm)
-            | (ListTerm(leftListTerm), VariableTerm(rightVarTerm)) -> functor'(ListTerm(changeVariablesForList procVariableChange leftListTerm), procVariableChange rightVarTerm)
-            | (ListTerm(leftListTerm), ListTerm(rightListTerm)) -> functor'(ListTerm(changeVariablesForList procVariableChange leftListTerm), ListTerm(changeVariablesForList procVariableChange rightListTerm))
+            | ((StructureTerm(_) as leftStructureTerm), VariableTerm(rightVarTerm)) -> functor'(changeVariablesRecursive procVariableChange leftStructureTerm, procVariableChange rightVarTerm)
+            | ((ListTerm(_) as leftListTerm), VariableTerm(rightVarTerm)) -> functor'(changeVariablesRecursive procVariableChange leftListTerm, procVariableChange rightVarTerm)
+            | ((ListTerm(_) as leftListTerm), (ListTerm(_) as rightListTerm)) -> functor'(changeVariablesRecursive procVariableChange leftListTerm, changeVariablesRecursive procVariableChange rightListTerm)
             | _ -> functor'(leftTerm, rightTerm)
 
         match expression with
@@ -51,8 +51,8 @@ module ExpressionUnify =
             match expr with
             | VariableTerm variableTerm -> ResultExpression (changeVariable variableTerm)
             | TypedTerm _ -> expression
-            | StructureTerm structureTerm -> ResultExpression(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
-            | ListTerm listTerm -> ResultExpression(ListTerm(changeVariablesForList changeVariable listTerm))
+            | StructureTerm _ as structureTerm -> ResultExpression(changeVariablesRecursive changeVariable structureTerm)
+            | ListTerm _ as listTerm -> ResultExpression(changeVariablesRecursive changeVariable listTerm)
         | CallExpression(GoalSignature(goalName, arguments)) ->
             let newGoalArgs =
                 arguments
@@ -60,8 +60,8 @@ module ExpressionUnify =
                 |> List.map (function
                             | VariableTerm(variableTerm) -> Argument(changeVariable variableTerm)
                             | TypedTerm(typedTerm) -> Argument(TypedTerm(typedTerm))
-                            | StructureTerm(structureTerm) -> Argument(StructureTerm(changeVariablesForStruct changeVariable structureTerm))
-                            | ListTerm(listTerm) -> Argument(ListTerm(changeVariablesForList changeVariable listTerm)))
+                            | StructureTerm(_) as structureTerm -> Argument(changeVariablesRecursive changeVariable structureTerm)
+                            | ListTerm(_) as listTerm -> Argument(changeVariablesRecursive changeVariable listTerm))
             CallExpression (GoalSignature(goalName, newGoalArgs))
         | CalcExpr (calcTerm, calc) ->
             match calcTerm with
