@@ -11,6 +11,9 @@ module VariableUnify =
         else
             Some <| List.map Option.get list
 
+    open System
+    open Rule
+    open Rule
     open Rule
 
     let rec private changeVariablesRecursive (changeVariable: Variable -> Term) =
@@ -153,84 +156,32 @@ module VariableUnify =
             |> bindOptionalList
         )
 
+    // Requires unique variable names for parameters and arguments
     let unifyParamsWithArgs (parameters: Parameter list) (arguments: Argument list) =
         _unifyDestsFromSources (Transformers.fromArgs arguments |> List.map Source) (Transformers.fromParams parameters |> List.map Dest)
 
-    /// Unifies second term to the first one if it was concrete
-//    let rec private _unifyRightToConcreteLeft (leftTerm: Term) (rightTerm: Term) =
-//        match (leftTerm, rightTerm) with
-//        | (_, VariableTerm(_)) -> Some leftTerm // TODO: check if it's OK
-//        | (VariableTerm(_), _) -> Some rightTerm
-//        | (TypedTerm(leftTypedTerm), TypedTerm(rightTypedTerm)) when leftTypedTerm = rightTypedTerm -> Some rightTerm
-//        | (StructureTerm(Structure(leftFunctor, leftParameters)), StructureTerm(Structure(rightFunctor, rightParameters)))
-//            when leftFunctor = rightFunctor && leftParameters.Length = rightParameters.Length ->
-//                let newArgs = List.map2 (fun leftVariable rightVariable -> _unifyRightToConcreteLeft leftVariable rightVariable) leftParameters rightParameters
-//                if List.exists Option.isNone newArgs then
-//                    None
-//                else
-//                    let newArgs = newArgs |> List.map Option.get
-//                    Some(StructureTerm(Structure(leftFunctor, newArgs)))
-//        | (ListTerm(leftListTerm), ListTerm(rightListTerm)) ->
-//            match (leftListTerm, rightListTerm) with
-//            | NilTerm, NilTerm -> Some leftTerm
-//            | _, VarListTerm _ -> Some leftTerm
-//            | VarListTerm _, _ -> Some rightTerm
-//            | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) -> 
-//                _unifyRightToConcreteLeft leftTerm rightTerm
-//                |> Option.bind (fun unifiedTerm ->
-//                    let concatListTerm =
-//                        function
-//                        | ListTerm(r) -> Some(ListTerm(TypedListTerm(unifiedTerm, r)))
-//                        | _ -> failwith "List term"
-//                    _unifyRightToConcreteLeft (ListTerm leftTail) (ListTerm rightTail) |> Option.bind concatListTerm)
-//            | _ -> None
-//        | _ -> None
-//
-//    let rec private unifyParametersWithArgumentsOnlyPositional (parameters: Parameter list) (arguments: Argument list) =
-//        if parameters.Length = arguments.Length then
-//            let prms = List.map2 (fun (Parameter(paramer)) (Argument(argument)) -> _unifyRightToConcreteLeft paramer argument) parameters arguments
-//            bindOptionalList prms
-//        else
-//            None
-//
-//    let rec private unifyParametersAfterPositional (parameters: Parameter list) (postUnifyParameters: Parameter list) =
-//        let rawChanges = 
-//            List.zip (Rule.Transformers.fromParams parameters) (Rule.Transformers.fromParams postUnifyParameters)
-//            |> List.fold (fun changes (initial, concrete) ->
-//                match initial with
-//                | VariableTerm(Variable v) when (not <| Helpers.isVariable concrete) ->
-//                    (initial, concrete)::changes
-//                | _ -> changes
-//            ) []
-//            
-//        rawChanges
-
-    // Probably there is a better design
-    // To have two different implementation of unitifactions
-    // Based on two cases:
-    // Position-based
-    // Variable-based
-    //
-    // So at first glance
-    // Position based
-    // Goal unifies with Goal if
-    // parameters can be unified with arguments
-    // 
-    // Variable-based
-    // All expression variables are unified with all others based on some rules
-    // Like taken from position
-    //
-    // So searching for goal will execute in next steps
-    // goal(parameters) -> goal(arguments)
-    // parameters -> arguments
-    // parameter -> argument on i'th position
-    // arguments that had some links to the other positions should be unified after
-    //
-    // So
-    // 1. Unify positionaly
-    // 2. Unify by positionaly resolved variables
-
     let rec unifyParametersWithArguments (parameters: Parameter list) (arguments: Argument list) =
-        // unifyParametersWithArgumentsOnlyPositional parameters arguments
+        let mutable initialVariableNameMap = Map.empty
+        let mapVariableToUniq kind =
+            List.map (changeVariablesRecursive (fun (Variable(v)) ->
+                let newName = v + (System.Guid.NewGuid().ToString())
+                let key = kind + "_" + newName
+                initialVariableNameMap <- initialVariableNameMap.Add (key, v)
+                VariableTerm(Variable(newName))
+            ))
+        let mapVariableBack =
+            changeVariablesRecursive (fun (Variable(v)) ->
+                let pKey = "parameters" + "_" + v
+                let aKey = "arguments" + "_" + v
+                initialVariableNameMap.TryFind pKey
+                |> Option.orElse (initialVariableNameMap.TryFind aKey)
+                |> Option.get
+                |> Variable
+                |> VariableTerm
+            )
+        
+        let parameters = parameters |> Transformers.fromParams |> mapVariableToUniq "parameters" |> Transformers.toParams
+        let arguments = arguments |> Transformers.fromArgs |> mapVariableToUniq "arguments" |> Transformers.toArgs
+        
         unifyParamsWithArgs parameters arguments
-        |> Option.map (List.map (fun (Unified(u)) -> u))
+        |> Option.map (List.map (fun (Unified(u)) -> u |> mapVariableBack))
