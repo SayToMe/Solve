@@ -73,45 +73,40 @@ module ExpressionUnify =
         | GrExpr (leftTerm, rightTerm) -> postUnifyBinaryExpression changeVariable GrExpr leftTerm rightTerm
         | LeExpr (leftTerm, rightTerm) -> postUnifyBinaryExpression changeVariable LeExpr leftTerm rightTerm
         | _ -> failwith "unchecked something"
+    
+    // Could be extracted
+    let postUnifyBinaryExpressions ((leftFirstTerm, leftSecondTerm): Term * Term) ((rightFirstTerm, rightSecondTerm): Term * Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
+        let postUnify (leftTerm: Term) (rightTerm: Term) (variable: Variable) =
+            match leftTerm with
+            | VariableTerm(variableTerm) when variableTerm = variable -> Some rightTerm
+            | ListTerm(_) ->
+                let rec unifl leftList rightList = 
+                    match leftList, rightList with
+                    | NilTerm, NilTerm -> None
+                    | VarListTerm(varListTerm), _ when varListTerm = variable -> Some (ListTerm(rightList))
+                    | TypedListTerm(VariableTerm(leftVarTerm), _), TypedListTerm(rightVarTerm, _) when leftVarTerm = variable ->
+                        Some rightVarTerm
+                    | TypedListTerm(_, leftTail), TypedListTerm(_, rightTail) ->
+                        unifl leftTail rightTail
+                    | _ -> None
 
+                match leftTerm, rightTerm with
+                | ListTerm(leftListTerm), ListTerm(rightListTerm) -> unifl leftListTerm rightListTerm
+                | _ -> failwithf "Unable to unify list with not list %A, %A" leftTerm rightTerm
+            | _ ->
+                match procVarOtherChange variable with
+                | VariableTerm(variableFromTerm) when variableFromTerm = variable -> None
+                | res -> Some res
+
+        match postUnify leftFirstTerm rightFirstTerm variable with
+        | Some resv -> resv
+        | None ->
+            match postUnify leftSecondTerm rightSecondTerm variable with
+            | Some resv -> resv
+            | _ -> procVarOtherChange variable
+    
     // returns change variable functions according to execution branches
     let getChangedVariableFns initialExpression expression =
-        /// There is a matching between t1 and t2 terms. After execution there could be changed variables that should be catched by every existing variable
-        let backwardsTermUnification (leftTerm: Term) (rightTerm: Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
-            match leftTerm with
-            | VariableTerm(variableTerm) when variableTerm = variable -> rightTerm
-            | _ -> procVarOtherChange variable
-            
-        let postUnifyBinaryExpressions ((leftFirstTerm, leftSecondTerm): Term * Term) ((rightFirstTerm, rightSecondTerm): Term * Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
-            let postUnify (leftTerm: Term) (rightTerm: Term) (variable: Variable) =
-                match leftTerm with
-                | VariableTerm(variableTerm) when variableTerm = variable -> Some rightTerm
-                | ListTerm(_) ->
-                    let rec unifl leftList rightList = 
-                        match leftList, rightList with
-                        | NilTerm, NilTerm -> None
-                        | VarListTerm(varListTerm), _ when varListTerm = variable -> Some (ListTerm(rightList))
-                        | TypedListTerm(VariableTerm(leftVarTerm), _), TypedListTerm(rightVarTerm, _) when leftVarTerm = variable ->
-                            Some rightVarTerm
-                        | TypedListTerm(_, leftTail), TypedListTerm(_, rightTail) ->
-                            unifl leftTail rightTail
-                        | _ -> None
-
-                    match leftTerm, rightTerm with
-                    | ListTerm(leftListTerm), ListTerm(rightListTerm) -> unifl leftListTerm rightListTerm
-                    | _ -> failwithf "Unable to unify list with not list %A, %A" leftTerm rightTerm
-                | _ ->
-                    match procVarOtherChange variable with
-                    | VariableTerm(variableFromTerm) when variableFromTerm = variable -> None
-                    | res -> Some res
-
-            match postUnify leftFirstTerm rightFirstTerm variable with
-            | Some resv -> resv
-            | None ->
-                match postUnify leftSecondTerm rightSecondTerm variable with
-                | Some resv -> resv
-                | _ -> procVarOtherChange variable
-        
         let rec _getChangedVariableFn initialExpression expression (changedVariableFns: (Variable -> Term) list) =
             match (initialExpression, expression) with
             | (True, True) -> changedVariableFns
@@ -159,14 +154,6 @@ module ExpressionUnify =
         unifyExpressionByParams parameters arguments body
         |> Option.bind (fun (resultBody, resultParameters) -> Some(Rule(Signature(name, toParams resultParameters), resultBody)))
     
-    let rec unifyListTerms (leftListTerm: TypedListTerm) (rightListTerm: TypedListTerm): Term -> Term =
-        match (leftListTerm, rightListTerm) with
-        | NilTerm, NilTerm -> id
-        | VarListTerm(varListTerm), rightListTerm -> fun v -> if v = VariableTerm(varListTerm) then ListTerm(rightListTerm) else v
-        | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
-            fun variableTerm -> if variableTerm = leftTerm then rightTerm else unifyListTerms leftTail rightTail variableTerm
-        | _ -> failwithf "Failed to unify two list terms %A, %A" leftListTerm rightListTerm
-
     let rec unifyResultToParameters arguments initialExpression expression =
         let unifyWithArgs (arguments: Term list) (left: Term) (right: Term) =
             arguments

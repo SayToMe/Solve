@@ -67,6 +67,11 @@ module VariableUnifyTests =
             |> checkUnifyTerms (None)
     
         [<Test>]
+        let ``Given [1; 2] unify with [X; X] should return None``() =
+            unifyTerms (anyList [num 1.; num 2.]) (anyList [var "X"; var "X"])
+            |> checkUnifyTerms (None)
+    
+        [<Test>]
         let ``Given [1, X, 3] unify with [A, 2, C] should return [1, 2, 3]``() =
             unifyTerms (anyList [num 1.; var "X"; num 3.]) (anyList [var "A"; num 2.; var "C"])
             |> checkUnifyTerms (Some (numList [1.; 2.; 3.]))

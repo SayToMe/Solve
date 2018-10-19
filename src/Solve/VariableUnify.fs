@@ -35,9 +35,43 @@ module VariableUnify =
                 | _ -> failwith ""
         | t -> t
 
+    /// There is a matching between t1 and t2 terms. After execution there could be changed variables that should be catched by every existing variable
+    let backwardsTermUnification (leftTerm: Term) (rightTerm: Term) (procVarOtherChange: Variable -> Term) (variable: Variable) =
+        match leftTerm with
+        | VariableTerm(variableTerm) when variableTerm = variable -> rightTerm
+        | _ -> procVarOtherChange variable
+
+    let rec unifyListTerms (leftListTerm: TypedListTerm) (rightListTerm: TypedListTerm): Term -> Term =
+        match (leftListTerm, rightListTerm) with
+        | NilTerm, NilTerm -> id
+        | VarListTerm(varListTerm), rightListTerm -> fun v -> if v = VariableTerm(varListTerm) then ListTerm(rightListTerm) else v
+        | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+            fun variableTerm -> if variableTerm = leftTerm then rightTerm else unifyListTerms leftTail rightTail variableTerm
+        | _ -> failwithf "Failed to unify two list terms %A, %A" leftListTerm rightListTerm
+
     type Source = Source of Term
     type Dest = Dest of Term
     type Unified = Unified of Term
+
+    type UnificationContext(map: Map<Variable, Term>) =
+        static member Empty = UnificationContext(Map.empty)
+        member self.Add v t =
+            if map.ContainsKey v then 
+                if map.Item v <> t then 
+                    None
+                else
+                    Some self
+            else
+                Some <| UnificationContext(map.Add (v, t))
+        member self.Process t =
+            changeVariablesRecursive (fun v ->
+                map.TryFind v
+                // Would it cause StackOverflow for variables into variables? Should we check
+                |> Option.map (self.Process)
+                |> Option.defaultValue (VariableTerm(v))
+            ) t
+
+    type UnificationResult = UnificationResult of term: Unified * context: UnificationContext
 
     /// Source -> Dest
     /// 1 -> 1 => 1
@@ -49,39 +83,75 @@ module VariableUnify =
     /// - In case we have call like (X, X) -> (A, B) => A should become B
     /// Why should variable name persist
     /// - In case we have bounded variable that should be renamed for whole nested expression with possible overlaps
-    let rec unifyTerms (Source(sourceTerm)) (Dest(destTerm)) =
+    let rec _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) (context: UnificationContext): UnificationResult option =
         let unifyVariables source dest =
             dest
+        
+        // Postpone fix
+        let unifyStructures (Structure(sourceFunctor, sourceParameters)) (Structure(destFunctor, destParameters)) =
+            let sourceParameters = List.map Source sourceParameters
+            let destParameters = List.map Dest destParameters
+            let newArgs = List.map2 _unifyTerms sourceParameters destParameters
+            None
+//            newArgs
+//            |> List.map (Option.map (fun (Unified(u)) -> u))
+//            |> bindOptionalList
+//            |> Option.map (fun newArgs -> Unified <| StructureTerm(Structure(sourceFunctor, newArgs)))
+
+        // Priority fix
+        let unifyLists sourceListTerm destListTerm (context: UnificationContext): UnificationResult option =
+            match (sourceListTerm, destListTerm) with
+            | NilTerm, NilTerm -> 
+                UnificationResult (Unified (ListTerm NilTerm), context)
+                |> Some
+            | _, VarListTerm v ->
+                context.Add v (ListTerm(sourceListTerm))
+                |> Option.map (fun c -> UnificationResult (Unified (ListTerm sourceListTerm), c))
+            | VarListTerm v, _ ->
+                context.Add v (ListTerm(destListTerm))
+                |> Option.map (fun c -> UnificationResult(Unified (ListTerm destListTerm), c))
+            | TypedListTerm(sourceTerm, sourceTail), TypedListTerm(destTerm, destTail) -> 
+                let unificationResult = _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) context
+                
+                unificationResult
+                |> Option.bind (fun (UnificationResult (Unified(unifiedTerm), newContext)) ->
+                    let concatListTerm = 
+                        function
+                        | UnificationResult(Unified(ListTerm(r)), c) ->
+                            UnificationResult(Unified <| ListTerm(TypedListTerm(unifiedTerm, r)), c)
+                        | _ -> failwith ""
+                        
+                    _unifyTerms (Source(ListTerm sourceTail)) (Dest(ListTerm destTail)) newContext
+                    |> Option.map concatListTerm
+                )
+            | _ -> None
 
         match (sourceTerm, destTerm) with
-            | (VariableTerm(_), VariableTerm(_)) -> Some << Unified <| unifyVariables sourceTerm destTerm
-            | (VariableTerm(_), _) -> Some <| Unified destTerm
-            | (_, VariableTerm(_)) -> Some <| Unified sourceTerm
+            | (VariableTerm(v), VariableTerm(_)) ->
+                // Should we fix renaming of variable
+                let unifiedVariable = unifyVariables sourceTerm destTerm
+                context.Add v unifiedVariable
+                |> Option.map (fun newContext -> UnificationResult(Unified unifiedVariable, newContext))
+            | (VariableTerm(v), _) ->
+                context.Add v destTerm
+                |> Option.map (fun newContext -> UnificationResult(Unified destTerm, newContext))
+            | (_, VariableTerm(v)) ->
+                context.Add v sourceTerm
+                |> Option.map (fun newContext -> UnificationResult(Unified sourceTerm, newContext))
             | (TypedTerm(sourceTypedTerm), TypedTerm(destTypedTerm))
-                when sourceTypedTerm = destTypedTerm -> Some <| Unified destTerm
-            | (StructureTerm(Structure(sourceFunctor, sourceParameters)), StructureTerm(Structure(destFunctor, destParameters)))
+                when sourceTypedTerm = destTypedTerm ->
+                    UnificationResult(Unified destTerm, context)
+                    |> Some
+            | (StructureTerm(Structure(sourceFunctor, sourceParameters) as sourceStructure), StructureTerm(Structure(destFunctor, destParameters) as destStructure))
                 when sourceFunctor = destFunctor && sourceParameters.Length = destParameters.Length ->
-                    let sourceParameters = List.map Source sourceParameters
-                    let destParameters = List.map Dest destParameters
-                    let newArgs = List.map2 unifyTerms sourceParameters destParameters
-                    newArgs
-                    |> List.map (Option.map (fun (Unified(u)) -> u))
-                    |> bindOptionalList
-                    |> Option.map (fun newArgs -> Unified <| StructureTerm(Structure(sourceFunctor, newArgs)))
+                    unifyStructures sourceStructure destStructure
             | (ListTerm(sourceListTerm), ListTerm(destListTerm)) ->
-                match (sourceListTerm, destListTerm) with
-                | NilTerm, NilTerm -> Some <| Unified sourceTerm
-                | _, VarListTerm _ -> Some <| Unified sourceTerm
-                | VarListTerm _, _ -> Some <| Unified destTerm
-                | TypedListTerm(sourceTerm, sourceTail), TypedListTerm(destTerm, destTail) -> 
-                    unifyTerms (Source(sourceTerm)) (Dest(destTerm))
-                    |> Option.bind (fun (Unified(unifiedTerm)) ->
-                        let concatListTerm = function | (Unified(ListTerm(r))) -> Unified <| ListTerm(TypedListTerm(unifiedTerm, r)) | _ -> failwith ""
-                        unifyTerms (Source(ListTerm sourceTail)) (Dest(ListTerm destTail))
-                        |> Option.map concatListTerm
-                    )
-                | _ -> None
+                unifyLists sourceListTerm destListTerm context
             | _ -> None
+
+    let unifyTerms (Source(sourceTerm) as source) (Dest(destTerm) as dest) =
+        _unifyTerms source dest UnificationContext.Empty
+        |> Option.map (fun (UnificationResult(r, _)) -> r)
 
     let rec private _unifyFromDestSourceUnification (Dest(destTerm)) (Unified(unifiedDestTerm)) (term: Term) =
         // Dest term can not be unified with another variable name (?)
