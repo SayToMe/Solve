@@ -73,6 +73,19 @@ module TermTypes =
 
         [<DebuggerStepThrough>]
         let atom = AtomTerm >> TypedAtomTerm >> TypedTerm
+
+        [<DebuggerStepThrough>]
+        let anyList =
+            List.rev
+            >> List.fold (fun st t -> TypedListTerm(t, st)) NilTerm
+            >> ListTerm
+        
+        [<DebuggerStepThrough>]
+        let anyListVar l v =
+            l
+            |> List.rev
+            |> List.fold (fun st t -> TypedListTerm(t, st)) (VarListTerm (Variable v))
+            |> ListTerm
         
         [<DebuggerStepThrough>]
         let numList =
@@ -88,3 +101,7 @@ module TermTypes =
                 else
                     TypedListTerm(TypedTerm(TypedCharTerm(CharTerm(str.[idx]))), strImpl (idx + 1))
             ListTerm(strImpl 0)
+
+        let anyStruct name args =
+            StructureTerm(Structure(name, args))
+            
