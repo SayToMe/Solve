@@ -11,7 +11,6 @@ module VariableUnify =
         else
             Some <| List.map Option.get list
 
-
     let rec changeVariablesRecursive (changeVariable: Variable -> Term) =
         function 
         | VariableTerm(variable) -> changeVariable variable
@@ -174,6 +173,8 @@ module VariableUnify =
         let prevSource = sourceTerm
         let sourceTerm = context.ApplySource sourceTerm
 
+        printfn "(%A -> %A) -> %A" prevSource sourceTerm destTerm
+        printfn "%A" context
         match (sourceTerm, destTerm) with
             | (VariableTerm(v), VariableTerm(dv)) ->
                 if context.IsSourceVariableFromDest v then
@@ -209,35 +210,6 @@ module VariableUnify =
             |> Option.map (fun (UnificationResult(r, _)) -> r)
         _unify source dest
 
-    let rec private _unifyFromDestSourceUnification (Dest(destTerm)) (Unified(unifiedDestTerm)) (term: Term) =
-        // Dest term can not be unified with another variable name (?)
-        // Gather all variable changes from sourceTerm by unification
-        // Try to apply to dest term
-        match destTerm, unifiedDestTerm with 
-        | VariableTerm(v), VariableTerm(v2) ->
-            if v <> v2 then
-                Some unifiedDestTerm
-            else
-                Some term
-        | VariableTerm(v), _ -> changeVariablesRecursive (fun vv -> if vv = v then unifiedDestTerm else VariableTerm(vv)) term |> Some
-        | StructureTerm(Structure(_, destParameters)), StructureTerm(Structure(_, unifiedDestParameters)) ->
-            (destParameters, unifiedDestParameters)
-            ||> List.fold2 (fun t c1 c2 -> Option.bind (_unifyFromDestSourceUnification (Dest c1) (Unified c2)) t) (Some term)
-        | ListTerm(destList), ListTerm(unifiedDestList) ->
-            match destList, unifiedDestList with
-            | NilTerm, NilTerm -> Some term
-            | VarListTerm(v), NilTerm
-            | VarListTerm(v), TypedListTerm(_, _) ->
-                changeVariablesRecursive (fun vv -> if vv = v then ListTerm(unifiedDestList) else VariableTerm(vv)) term
-                |> Some
-            | VarListTerm(v), VarListTerm(v2) ->
-                if v <> v2 then failwith "Unexpected variable name for unified dest term" else Some term
-            | TypedListTerm(destHead, destTail), TypedListTerm(unifiedDestHead, unifiedDestTail) ->
-                _unifyFromDestSourceUnification (Dest(destHead)) (Unified(unifiedDestHead)) term
-                |> Option.bind (_unifyFromDestSourceUnification (Dest(ListTerm(destTail))) (Unified(ListTerm(unifiedDestTail))))
-            | _ -> Some term
-        | _ -> Some term
-
     let rec private _unifyDestsFromSources (sources: Source list) (dests: Dest list) =
         let sourceTerms = sources |> List.map (fun (Source(t)) -> t)
         let destTerms = dests |> List.map (fun (Dest(t)) -> t)
@@ -252,11 +224,26 @@ module VariableUnify =
     let unifyParamsWithArgs (parameters: Parameter list) (arguments: Argument list): option<Unified list> =
         _unifyDestsFromSources (Transformers.fromArgs arguments |> List.map Source) (Transformers.fromParams parameters |> List.map Dest)
 
+    let nextVarIdGetter =
+        let mutable id = 0
+        let mutable varId = Map.empty
+        let inner(var) =
+            let varName =
+                varId
+                |> Map.tryFind var
+                |> Option.defaultWith (fun () -> 
+                    id <- id + 1
+                    id.ToString()
+                )
+            varId <- varId |> Map.add var varName
+            varName
+        inner
+            
     let rec unifyParametersWithArguments (parameters: Parameter list) (arguments: Argument list) =
         let mutable initialVariableNameMap = Map.empty
         let mapVariableToUniq kind =
             List.map (changeVariablesRecursive (fun (Variable(v)) ->
-                let newName = v + (System.Guid.NewGuid().ToString())
+                let newName = v + (nextVarIdGetter(v))
                 let key = kind + "_" + newName
                 initialVariableNameMap <- initialVariableNameMap.Add (key, v)
                 VariableTerm(Variable(newName))

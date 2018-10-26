@@ -187,7 +187,7 @@ module VariableUnifyTests =
         [<Test>]
         let ``Given (N) with (N2) should return (N)``() =
             VariableUnify.unifyParametersWithArguments (toParams [var "N"]) (toArgs [var "N2"])
-            |> check (Some([var "N2"]))
+            |> check (Some([var "N"]))
                 
         [<Test>]
         let ``Given (1) with (N) should return (1)``() =
