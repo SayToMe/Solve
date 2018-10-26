@@ -25,7 +25,7 @@ module TermTypes =
     [<AutoOpen>]
     module Variable =
         type AnonimVariable = AnonimVariable
-        type Variable = Variable of string
+        type Variable = Variable of name: string
         
     [<StructuredFormatDisplay("{AsString}")>]
     type Term = VariableTerm of Variable | TypedTerm of TypedTerm | StructureTerm of Structure | ListTerm of TypedListTerm
@@ -41,11 +41,17 @@ module TermTypes =
     and Structure = Structure of string * Term list
     and TypedListTerm = | NilTerm | VarListTerm of Variable | TypedListTerm of Term * TypedListTerm
         with
+        member self.asStringInner =
+            match self with 
+            | NilTerm -> "[]"
+            | VarListTerm(v) -> " | " + (VariableTerm(v)).AsString
+            | TypedListTerm(head, NilTerm) -> head.AsString
+            | TypedListTerm(head, rest) -> head.AsString + ", " + rest.asStringInner           
         member self.AsString =
             match self with
             | NilTerm -> "[]"
-            | VarListTerm(v) -> "[" + (VariableTerm(v).AsString) + "]"
-            | TypedListTerm(head, rest) -> "[" + head.AsString + "," + (ListTerm(rest)).AsString
+            | VarListTerm(v) -> "[" + self.asStringInner + "]"
+            | TypedListTerm(head, rest) -> "[" + self.asStringInner + "]"
         override self.ToString() = self.AsString
 
     module Helpers =
