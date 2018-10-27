@@ -116,8 +116,8 @@ module ParsedListTests =
         
     let insertMemberRule terminal =
         terminal
-//        |-> "member(E, L) :- head(E, L)."
-//        |-> "member(E, L) :- tail(T, L), member(E, T)."
+        |-> "member(E, L) :- head(E, L)."
+        |-> "member(E, L) :- tail(T, L), member(E, T)."
         
     [<Test>]
     let ``Check head on empty list test``() =
@@ -152,7 +152,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check tail on list test``() =
+    let ``Given tail(X, [1, 2, 3]) should return [[(X, [2, 3])]``() =
         TestTerminal()
         |> insertTailRule
         |?> "tail(X, [1, 2, 3])."
