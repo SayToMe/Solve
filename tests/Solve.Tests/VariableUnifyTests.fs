@@ -102,6 +102,16 @@ module VariableUnifyTests =
             |> checkUnifyTerms (Some (anyList [num 1.; num 1.; num 1.]))
     
         [<Test>]
+        let ``Given  [X; X] unify with [1; X] should return [1; 1]``() =
+            unifyTerms (anyList [var "X"; var "X"]) (anyList [num 1.; var "X"])
+            |> checkUnifyTerms (Some (anyList [num 1.; num 1.]))
+
+        [<Test>]
+        let ``Given  [X; X] unify with [X; 1] should return [1; 1]``() =
+            unifyTerms (anyList [var "X"; var "X"]) (anyList [var "X"; num 1.])
+            |> checkUnifyTerms (Some (anyList [num 1.; num 1.]))
+
+        [<Test>]
         let ``Given [] unify with [1 | X] should return None``() =
             unifyTerms (anyList []) (anyListVar [num 1.] "X")
             |> checkUnifyTerms (None)

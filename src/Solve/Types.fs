@@ -111,3 +111,8 @@ module TermTypes =
         let anyStruct name args =
             StructureTerm(Structure(name, args))
             
+        let rec anyListToConcreteTerms (list: TypedListTerm) =
+            match list with 
+            | NilTerm -> []
+            | VarListTerm _ -> failwith "Unexpected end of list"
+            | TypedListTerm(head, tail) -> head::anyListToConcreteTerms tail

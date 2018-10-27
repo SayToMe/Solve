@@ -1,6 +1,5 @@
 ﻿namespace Solve
 
-open System
 open TermTypes
 open Rule
 
@@ -116,6 +115,8 @@ module VariableUnify =
 
     type UnificationResult = UnificationResult of term: Unified * context: UnificationContext
 
+    type RecursiveBypassOrder = Down | Up
+
     /// Idea is pretty simple
     /// Source -> Dest
     /// 1 -> 1 => 1
@@ -124,7 +125,7 @@ module VariableUnify =
     /// X -> Y => Y
     /// X -> Y => Y & X -> Z => Y
     /// (1, X, 3, 4) => (A, B, C | R) => (1, B, 3, 4)
-    let rec _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) (context: UnificationContext): UnificationResult option =
+    let rec _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) (context: UnificationContext) (bypassOrder: RecursiveBypassOrder): UnificationResult option =
         let unifyStructures (Structure(sourceFunctor, sourceParameters)) (Structure(destFunctor, destParameters)) (context: UnificationContext): UnificationResult option =
             let functor' = sourceFunctor
             let sourceParameters = List.map Source sourceParameters
@@ -134,7 +135,7 @@ module VariableUnify =
             ||> List.fold2 (fun state sourceTerm destTerm ->
                 state
                 |> Option.bind (fun (res, context) ->
-                    _unifyTerms sourceTerm destTerm context
+                    _unifyTerms sourceTerm destTerm context bypassOrder
                     |> Option.map (fun (UnificationResult(ut, newContext)) ->
                         (res@[ut], newContext)
                     )
@@ -142,7 +143,7 @@ module VariableUnify =
             ) (Some ([], context))
             |> Option.map (fun (t, c) -> UnificationResult(Unified(StructureTerm(Structure(functor', List.map fromUnified t))), c))
 
-        let unifyLists sourceListTerm destListTerm (context: UnificationContext): UnificationResult option =
+        let unifyLists sourceListTerm destListTerm (context: UnificationContext) (bypassOrder: RecursiveBypassOrder): UnificationResult option =
             match (sourceListTerm, destListTerm) with
             | NilTerm, NilTerm -> 
                 UnificationResult (Unified (ListTerm NilTerm), context)
@@ -153,20 +154,34 @@ module VariableUnify =
             | VarListTerm v, _ ->
                 context.AddDest v (ListTerm(destListTerm))
                 |> Option.map (fun c -> UnificationResult(Unified (ListTerm destListTerm), c))
-            | TypedListTerm(sourceTerm, sourceTail), TypedListTerm(destTerm, destTail) -> 
-                let unificationResult = _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) context
-                
-                unificationResult
-                |> Option.bind (fun (UnificationResult (Unified(unifiedTerm), newContext)) ->
-                    let concatListTerm =
-                        function
-                        | UnificationResult(Unified(ListTerm(r)), c) ->
-                            UnificationResult(Unified <| ListTerm(TypedListTerm(unifiedTerm, r)), c)
+            | TypedListTerm(sourceTerm, sourceTail), TypedListTerm(destTerm, destTail) ->
+                match bypassOrder with 
+                | Down ->
+                    let unificationResult = _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) context bypassOrder
+                    
+                    unificationResult
+                    |> Option.bind (fun (UnificationResult (Unified(unifiedTerm), newContext)) ->
+                        let concatListTerm =
+                            function
+                            | UnificationResult(Unified(ListTerm(r)), c) ->
+                                UnificationResult(Unified <| ListTerm(TypedListTerm(unifiedTerm, r)), c)
+                            | _ -> failwith ""
+                            
+                        _unifyTerms (Source(ListTerm sourceTail)) (Dest(ListTerm destTail)) newContext bypassOrder
+                        |> Option.map concatListTerm
+                    )
+                | Up ->
+                    _unifyTerms (Source(ListTerm sourceTail)) (Dest(ListTerm destTail)) context bypassOrder
+                    |> Option.bind (fun (UnificationResult (Unified(unifiedTail), newContext)) ->
+                        match unifiedTail with
+                        | ListTerm(unifiedTail) ->
+                            let unificationResult = _unifyTerms (Source(sourceTerm)) (Dest(destTerm)) newContext bypassOrder
+                            unificationResult
+                            |> Option.map (fun (UnificationResult(Unified(unifiedTerm), nContext)) ->
+                                UnificationResult(Unified <| ListTerm(TypedListTerm(unifiedTerm, unifiedTail)), nContext)
+                            )
                         | _ -> failwith ""
-                        
-                    _unifyTerms (Source(ListTerm sourceTail)) (Dest(ListTerm destTail)) newContext
-                    |> Option.map concatListTerm
-                )
+                    )
             | _ -> None
 
         let destTerm = context.ApplyDest destTerm
@@ -174,7 +189,7 @@ module VariableUnify =
         let sourceTerm = context.ApplySource sourceTerm
 
         printfn "(%A -> %A) -> %A" prevSource sourceTerm destTerm
-        printfn "%A" context
+        printfn "Context: %A" context
         match (sourceTerm, destTerm) with
             | (VariableTerm(v), VariableTerm(dv)) ->
                 if context.IsSourceVariableFromDest v then
@@ -201,22 +216,32 @@ module VariableUnify =
                 when sourceFunctor = destFunctor && sourceParameters.Length = destParameters.Length ->
                     unifyStructures sourceStructure destStructure context
             | (ListTerm(sourceListTerm), ListTerm(destListTerm)) ->
-                unifyLists sourceListTerm destListTerm context
+                unifyLists sourceListTerm destListTerm context bypassOrder
             | _ -> None
 
     let unifyTerms (Source(sourceTerm) as source) (Dest(destTerm) as dest) =
-        let _unify (Source(sourceTerm) as source) (Dest(destTerm) as dest) =
-            _unifyTerms source dest UnificationContext.Empty
+        let _unify (Source(sourceTerm) as source) (Dest(destTerm) as dest) bypassOrder =
+            _unifyTerms source dest UnificationContext.Empty bypassOrder
             |> Option.map (fun (UnificationResult(r, _)) -> r)
-        _unify source dest
+        printfn "Unification: %A -> %A Down" source dest
+        let r1 = _unify source dest Down
+        printfn "Unification: %A -> %A Up" source dest
+        let r2 = _unify source dest Up
+        
+        (r2, r1)
+        |> function
+        | (Some(Unified(r1)), Some(Unified(r2))) ->
+            printfn "Post Unification: %A -> %A Down" r1 r2
+            _unify (Source r1) (Dest r2) Down
+        | _ -> None
 
     let rec private _unifyDestsFromSources (sources: Source list) (dests: Dest list) =
         let sourceTerms = sources |> List.map (fun (Source(t)) -> t)
         let destTerms = dests |> List.map (fun (Dest(t)) -> t)
-        unifyTerms (Source(StructureTerm(Structure("a", sourceTerms)))) (Dest(StructureTerm(Structure("a", destTerms))))
+        unifyTerms (Source(Transformers.anyList sourceTerms)) (Dest(Transformers.anyList destTerms))
         |> Option.map (fun o ->
             match o with
-            | (Unified(StructureTerm(Structure("a", resTerms)))) -> resTerms |> List.map Unified
+            | (Unified(ListTerm(typedList))) -> typedList |> Transformers.anyListToConcreteTerms |> List.map Unified
             | _ -> failwith ""
         )
         
@@ -227,15 +252,16 @@ module VariableUnify =
     let nextVarIdGetter =
         let mutable id = 0
         let mutable varId = Map.empty
-        let inner(var) =
+        let inner(var, key) =
+            let innerKey = var + "_" + key
             let varName =
                 varId
-                |> Map.tryFind var
+                |> Map.tryFind innerKey
                 |> Option.defaultWith (fun () -> 
                     id <- id + 1
                     id.ToString()
                 )
-            varId <- varId |> Map.add var varName
+            varId <- varId |> Map.add innerKey varName
             varName
         inner
             
@@ -243,7 +269,7 @@ module VariableUnify =
         let mutable initialVariableNameMap = Map.empty
         let mapVariableToUniq kind =
             List.map (changeVariablesRecursive (fun (Variable(v)) ->
-                let newName = v + (nextVarIdGetter(v))
+                let newName = v + (nextVarIdGetter(v, kind))
                 let key = kind + "_" + newName
                 initialVariableNameMap <- initialVariableNameMap.Add (key, v)
                 VariableTerm(Variable(newName))
