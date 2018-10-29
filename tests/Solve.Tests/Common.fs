@@ -5,9 +5,6 @@ open System.Diagnostics
 
 open Solve
 
-open TermTypes
-open TermTypes.Transformers
-
 open Rule
 open Rule.Transformers
 

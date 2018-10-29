@@ -1,9 +1,5 @@
 ﻿namespace Solve.Tests
-open System
 open NUnit.Framework
-
-open NUnit.Framework
-open System.Diagnostics
 
 open Solve
 
@@ -113,7 +109,7 @@ module SolveTests =
         |> checkSolve [[Variable "N", num 1.]]
 
     [<Test>]
-    let ``Given factorial rule solve with 1..10 should return first 10 factorial numbers``() =
+    let ``Given `factorial` solve with 1..10 should return first 10 factorial numbers``() =
         let leftOr = AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.))
         let rightOr = AndExpression(GrExpr(var "N", num 1.), AndExpression(CalcExpr(var "N1", Subsctruct(Value(var "N"), Value(num 1.))), AndExpression(GOAL "factorial" [var "N1"; var "R1"], CalcExpr(var "Res", Multiply(Value(var "R1"), Value(var "N"))))))
         let factorial = RULE(SIGNATURE "factorial" [var "N"; var "Res"]) (OrExpression(leftOr, rightOr))
@@ -131,7 +127,7 @@ module SolveTests =
         [1..10] |> List.iter (float >> checkf)
         
     [<Test>]
-    let ``Given factorial rule with cut solve with 1..10 should return first 10 factorial numbers``() =
+    let ``Given `factorial` with cut solve with 1..10 should return first 10 factorial numbers``() =
         let leftOr = AndExpression(AndExpression(EqExpr(var "N", num 1.), EqExpr(var "Res", num 1.)), Cut)
         let rightOr = AndExpression(CalcExpr(var "N1", Subsctruct(Value(var "N"), Value(num 1.))), AndExpression(GOAL "factorial" [var "N1"; var "R1"], CalcExpr(var "Res", Multiply(Value(var "R1"), Value(var "N")))))
         let factorial = RULE(SIGNATURE "factorial" [var "N"; var "Res"]) (OrExpression(leftOr, rightOr))

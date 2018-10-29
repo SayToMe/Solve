@@ -1,19 +1,12 @@
 module Solve.ParsedTests
 
 open NUnit.Framework
-open System.Diagnostics
 
 open Solve
 
 open TermTypes
 open TermTypes.Transformers
 
-open Rule
-open Rule.Transformers
-open VariableUnify
-open ExpressionUnify
-
-open System
 open Solve.Terminal
 
 let (|->) terminal input =
@@ -76,25 +69,56 @@ let expectedResult expected (terminal: TestTerminal) =
 
 [<TestFixture>]
 module ParsedFactorialTests =
+    let insertFactorialRule terminal =
+        terminal
+        |-> "factorial(1, 1)."
+        |-> "factorial(X, R):- X > 1, X1 is X - 1, fact(X1, R1), R is R1 * X."
+
     [<Test>]
-    let ``Check facts test``() =
-        TestTerminal()
-        |-> "fact(1, 1)."
-        |-> "fact(X, R):- X > 1, X1 is X - 1, fact(X1, R1), R is R1 * X."
-        |?> "fact(1, X)."
+    let ``Given `factorial` solve with factorial(1, X) should return [X = 1]``() =
+        insertFactorialRule (TestTerminal())
+        |?> "factorial(1, X)."
         |> expectedResult [[(Variable "X", num 1.)]]
-        |?> "fact(2, X)."
+        |> ignore
+
+    [<Test>]
+    let ``Given `factorial` solve with factorial(2, X) should return [X = 2]``() =
+        insertFactorialRule (TestTerminal())
+        |?> "factorial(2, X)."
         |> expectedResult [[(Variable "X", num 2.)]]
-        |?> "fact(3, X)."
+        |?> "factorial(3, X)."
         |> expectedResult [[(Variable "X", num 6.)]]
-        |?> "fact(5, 120)."
+        |?> "factorial(5, 120)."
         |> expectedResult [[]]
         |> ignore
-        
+
+    [<Test>]
+    let ``Given `factorial` solve with factorial(3, X) should return [X = 6]``() =
+        insertFactorialRule (TestTerminal())
+        |?> "factorial(3, X)."
+        |> expectedResult [[(Variable "X", num 6.)]]
+        |?> "factorial(5, 120)."
+        |> expectedResult [[]]
+        |> ignore
+
+    [<Test>]
+    let ``Given `factorial` solve with factorial(5, 120) should return true``() =
+        insertFactorialRule (TestTerminal())
+        |?> "factorial(5, 120)."
+        |> expectedResult [[]]
+        |> ignore
+
+    [<Test>]
+    let ``Given `factorial` solve with factorial(5, 121) should return false``() =
+        insertFactorialRule (TestTerminal())
+        |?> "factorial(5, 121)."
+        |> expectedResult []
+        |> ignore
+
 [<TestFixture>]
 module ParsedFactTests =
     [<Test>]
-    let ``Check facts test``() =
+    let ``Given `test(1). test(2).` solve with test(X) should return [X = 1], [X = 2]``() =
         TestTerminal()
         |-> "test(1)."
         |-> "test(2)."
@@ -120,7 +144,7 @@ module ParsedListTests =
         |-> "member(E, L) :- tail(T, L), member(E, T)."
         
     [<Test>]
-    let ``Check head on empty list test``() =
+    let ``Given `head` solve with head(X, []) should return false``() =
         TestTerminal()
         |> insertHeadRule
         |?> "head(X, [])."
@@ -128,7 +152,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check head on list test``() =
+    let ``Given `head` solve with head(X, [1, 2, 3]) should return [X = 1]``() =
         TestTerminal()
         |> insertHeadRule
         |?> "head(X, [1, 2, 3])."
@@ -136,7 +160,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check tail on empty list test``() =
+    let ``Given `tail` solve with tail(X, []) should return false``() =
         TestTerminal()
         |> insertTailRule
         |?> "tail(X, [])."
@@ -144,7 +168,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check tail on single element list test``() =
+    let ``Given `tail` solve with tail(X, [1]) should return [X = []]``() =
         TestTerminal()
         |> insertTailRule
         |?> "tail(X, [1])."
@@ -152,7 +176,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Given tail(X, [1, 2, 3]) should return [[(X, [2, 3])]``() =
+    let ``Given `tail` solve with tail(X, [1, 2, 3]) should return [X = [2, 3]]``() =
         TestTerminal()
         |> insertTailRule
         |?> "tail(X, [1, 2, 3])."
@@ -160,7 +184,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check member on empty list test``() =
+    let ``Given `member` solve with member(X, []) should return false``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
@@ -170,7 +194,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check member on list test``() =
+    let ``Given `member` solve with member(X, [1, 2]) should return [X = 1], [X = 2]``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
@@ -180,7 +204,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check member on first list test``() =
+    let ``Given `member` solve with member(1, [1, 2]) should return true``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
@@ -190,7 +214,7 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check member on second list test``() =
+    let ``Given `member` solve with member(2, [1, 2]) should return true``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
@@ -200,7 +224,17 @@ module ParsedListTests =
         |> ignore
         
     [<Test>]
-    let ``Check member on list with replacement test 1``() =
+    let ``Given `member` solve with `L = [1, 2], member(2, L).` should return [L = [1, 2]] ``() =
+        TestTerminal()
+        |> insertHeadRule
+        |> insertTailRule
+        |> insertMemberRule
+        |?> "L = [1, 2], member(2, L)."
+        |> expectedResult [[(Variable "L", numList [1.; 2.])]]
+        |> ignore
+
+    [<Test>]
+    let ``Given `member. list([1, 2]).` solve with `list(L), member(2, L).` should return [L = [1, 2]]``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
@@ -209,25 +243,14 @@ module ParsedListTests =
         |?> "L = [1, 2], member(2, L)."
         |> expectedResult [[(Variable "L", numList [1.; 2.])]]
         |> ignore
-        
-    [<Test>]
-    let ``Check member on list with replacement test 2``() =
-        TestTerminal()
-        |> insertHeadRule
-        |> insertTailRule
-        |> insertMemberRule
-        |-> "list([1, 2])."
-        |?> "list(L), member(2, L)."
-        |> expectedResult [[(Variable "L", numList [1.; 2.])]]
-        |> ignore
 
     [<Test>]
-    let ``Check member on list with replacement test 3``() =
+    let ``Given `member. list([1, 2]).` solve with `member(2, L), list(L).` should return [L = [1, 2]]``() =
         TestTerminal()
         |> insertHeadRule
         |> insertTailRule
         |> insertMemberRule
         |-> "list([1, 2])."
-        |?> "member(2, L), list(L)."
+        |?> "L = [1, 2], member(2, L)."
         |> expectedResult [[(Variable "L", numList [1.; 2.])]]
         |> ignore

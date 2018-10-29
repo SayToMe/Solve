@@ -1,7 +1,5 @@
 ﻿module Solve.InteractiveTests
 
-open Solve.Tests
-
 open NUnit.Framework
 
 open Solve.TermTypes
@@ -9,10 +7,7 @@ open Solve.TermTypes.Transformers
 open Solve.Rule
 open Solve.Rule.Transformers
 
-open FParsec
-
 open Solve.PrologParser
-open Solve.PrologParser.Primitives
 open Solve.PrologParser.Parser
 
 open Solve.PrimitivesTests
