@@ -11,8 +11,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common.fs" />
-    <Compile Include="VariableUnifyTests.fs" />
+    <Compile Include="TermsUnifyTests.fs" />
+    <Compile Include="ChangeVariableTests.fs" />
+    <Compile Include="ParameterWithArgumentUnifyTests.fs" />
     <Compile Include="ExpressionUnifyTests.fs" />
+    <Compile Include="RuleUnifyTests.fs" />
     <Compile Include="ExecuteTests.fs" />
     <Compile Include="ParsedTests.fs" />
     <Compile Include="SolveTests.fs" />

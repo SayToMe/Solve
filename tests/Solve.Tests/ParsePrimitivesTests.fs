@@ -1,9 +1,6 @@
 ﻿module Solve.PrimitivesTests
 
-open Solve.Tests
-
 open NUnit.Framework
-open System.Diagnostics
 
 open Solve
 open Solve.TermTypes
@@ -11,9 +8,7 @@ open Solve.TermTypes
 open TermTypes.Transformers
 
 open Rule
-open Rule.Transformers
 
-open Solve.PrologParser
 open Solve.PrologParser.Parser
 
 open Solve.Tests.Common
