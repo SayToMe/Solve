@@ -12,7 +12,7 @@ open Rule.Transformers
 open Solve.Tests.Common
 
 [<TestFixture>]
-module UnifyParametersWithArguments =
+module ParametersWithArgumentsUnifyTests =
     [<Test>]
     let ``Given (10, 5, V) with (10, 5, V) should return (10, 5, V)``() =
         VariableUnify.unifyParametersWithArguments (toParams [num 10.; num 5.; var "V"]) (toArgs [num 10.; num 5.; var "V"])
