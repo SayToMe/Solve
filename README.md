@@ -39,3 +39,4 @@ Mono | .NET
 ## Maintainer(s)
 
 - [@saytome](https://github.com/saytome)
+- [@qrtic](https://github.com/qrtic)
