@@ -98,26 +98,32 @@ module Primitives =
                     ))
                 pinnerCalc () <|> pval
             attempt <| _pcalc ()
-        let rec _pbody () =
-            let ptrueExpr = stringReturn "true" True
-            let pfalseExpr = stringReturn "false" False
-            let peqExpr = attempt <| pipe3 pterm (pstring "=" .>> ws) pterm (fun a1 _ a2 -> EqExpr(a1, a2))
-            let pgrExpr = attempt <| pipe3 pterm (pstring ">" .>> ws) pterm (fun a1 _ a2 -> GrExpr(a1, a2))
-            let pleExpr = attempt <| pipe3 pterm (pstring "<" .>> ws) pterm (fun a1 _ a2 -> LeExpr(a1, a2))
-            let calcExpr () = (attempt <| pipe3 pterm (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c)))
-            let pcallExpr () = attempt <| (psignature |>> (fun (Signature(name, parameters)) -> CallExpression(GoalSignature(name, parameters |> fromParams |> toArgs))))
+        let rec __pbody() =
+            let rec _pbody () =
+                let ptrueExpr = stringReturn "true" True
+                let pfalseExpr = stringReturn "false" False
+                let pcutExpr = stringReturn "!" Cut
+                let peqExpr = attempt <| pipe3 pterm (pstring "=" .>> ws) pterm (fun a1 _ a2 -> EqExpr(a1, a2))
+                let pgrExpr = attempt <| pipe3 pterm (pstring ">" .>> ws) pterm (fun a1 _ a2 -> GrExpr(a1, a2))
+                let pleExpr = attempt <| pipe3 pterm (pstring "<" .>> ws) pterm (fun a1 _ a2 -> LeExpr(a1, a2))
+                let calcExpr () = (attempt <| pipe3 pterm (pstring "is" .>> ws) pcalc (fun t _ c -> CalcExpr(t, c)))
+                let pcallExpr () = attempt <| (psignature |>> (fun (Signature(name, parameters)) -> CallExpression(GoalSignature(name, parameters |> fromParams |> toArgs))))
 
-            let singleExpression = (ptrueExpr <|> pfalseExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr () <|> pcallExpr ()) .>> ws
+                let singleExpression = (ptrueExpr <|> pfalseExpr <|> pcutExpr <|> peqExpr <|> pgrExpr <|> pleExpr <|> calcExpr () <|> pcallExpr ()) .>> ws
 
-            let pinnerExpr () = attempt <| (singleExpression >>=? (fun x ->
-                ((pstring "," .>> ws) >>? _pbody () |>> (fun y -> AndExpression(x, y)))
-                <|>
-                ((pstring ";" .>> ws) >>? _pbody () |>> (fun y -> OrExpression(x, y)))
+                let pinnerExpr () = attempt <| (singleExpression >>=? (fun x ->
+                    ((pstring "," .>> ws) >>? _pbody () |>> (fun y -> AndExpression(x, y)))
+                ) .>> ws)
+
+                (pinnerExpr () <|> singleExpression)
+
+            let singleBody = _pbody() .>> ws
+            let rec pinnerOrExpr () =
+                attempt <| (singleBody >>=? (fun x ->
+                ((pstring ";" .>> ws) >>? __pbody () |>> (fun y -> OrExpression(x, y)))
             ) .>> ws)
-
-            (pinnerExpr () <|> singleExpression)
-
-        attempt <| (_pbody () .>> ws)
+            attempt <| (pinnerOrExpr () <|> singleBody)
+        __pbody()
 
     let pbody = pexpr
     let prule = pipe4 psignature (pstring ":-" .>> ws) (pbody .>> ws) (pstring ".") (fun signature _ body _ -> Rule(signature, body))

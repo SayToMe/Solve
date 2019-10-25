@@ -88,6 +88,10 @@ module ParserTests =
         parse ":- fact(y) . " |> check (DefinitionParseResult(RULE(SIGNATURE "fact" [atom "y"]) True))
 
     [<Test>]
+    let parseFactWithCut() =
+        parse ":-fact(y):-!. " |> check (DefinitionParseResult(RULE(SIGNATURE "fact" [atom "y"]) Cut))
+
+    [<Test>]
     let parseEqGrLeRuleWithoutSpaces() =
         parse ":-rule(X):-X=1." |> check (DefinitionParseResult(RULE(SIGNATURE "rule" [var "X"]) (EqExpr(var "X", num 1.))))
         parse ":-rule(X):-X>1." |> check (DefinitionParseResult(RULE(SIGNATURE "rule" [var "X"]) (GrExpr(var "X", num 1.))))
@@ -114,10 +118,19 @@ module ParserTests =
     [<Test>]
     let parseAndRule() =
          parse ":-rule(X, Y) :- X = 1, Y = 2." |> check (DefinitionParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (AndExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
-    
+
+    [<Test>]
+    let parseDoubleAndRule() =
+         parse ":-rule(X, Y) :- X = 1, Y = 2, Z = 3." |> check (DefinitionParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (AndExpression(EqExpr(var "X", num 1.), AndExpression(EqExpr(var "Y", num 2.), EqExpr(var "Z", num 3.))))))
+
     [<Test>]
     let parseOrRule() =
          parse ":-rule(X, Y) :- X = 1 ; Y = 2." |> check (DefinitionParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (OrExpression(EqExpr(var "X", num 1.), EqExpr(var "Y", num 2.)))))
+
+    [<Test>]
+    let parseOrRuleWithCut() =
+         parse ":-rule(X, Y) :- X = 1, ! ; Y = 2."
+         |> check (DefinitionParseResult(RULE (SIGNATURE "rule" [var "X"; var "Y"]) (OrExpression(AndExpression(EqExpr(var "X", num 1.), Cut), EqExpr(var "Y", num 2.)))))
 
     [<Test>]
     let parseRecursiveRule() =
