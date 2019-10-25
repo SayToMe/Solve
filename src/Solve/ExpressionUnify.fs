@@ -134,20 +134,37 @@ module ExpressionUnify =
         
     let unifyRule (Rule(Signature(name, parameters), body)) arguments =
         let unifyExpressionByParams parameters arguments expression =
-            let changeVariable (Parameter(parameter)) argument =
+            let rec changeVariable (Parameter(parameter)) (argument: Term): (Variable -> Term) =
                 let retIfEquals variable result checkedVariable = if checkedVariable = variable then result else VariableTerm(checkedVariable)
 
                 match (parameter, argument) with
                 | VariableTerm(leftVariable), VariableTerm(rightVariable) -> fun checkedVariable -> if checkedVariable = rightVariable then VariableTerm leftVariable else VariableTerm checkedVariable
                 | VariableTerm(leftVariable), _ -> retIfEquals leftVariable argument
                 | _, VariableTerm(rightVariable) -> retIfEquals rightVariable parameter
+                | ListTerm(leftList), ListTerm(rightList) ->
+                    let rec uniList leftList rightList =
+                        match leftList, rightList with
+                        | TypedListTerm(leftTerm, leftTail), TypedListTerm(rightTerm, rightTail) ->
+                            let innerChange = uniList leftTail rightTail
+                            let curChange = changeVariable (Parameter(leftTerm)) (rightTerm)
+                            fun v ->
+                                match curChange v with
+                                | VariableTerm v -> innerChange v
+                                | res -> res
+                        | VarListTerm(v), _ -> retIfEquals v (ListTerm(rightList))
+                        | _, VarListTerm(v) -> retIfEquals v (ListTerm(leftList))
+                        | _ -> VariableTerm
+                    uniList leftList rightList
+                // TODO get variable transforms for recursive structures
+                | StructureTerm(_), StructureTerm(_) -> VariableTerm
                 | _ -> VariableTerm
 
             unifyParametersWithArguments parameters arguments
             |> Option.bind (fun unifiedArgs ->
                 let newExpr =
                     List.zip parameters unifiedArgs
-                    |> List.fold (fun acc (parameter, unifiedArg) -> unifyExpression acc (changeVariable parameter unifiedArg)) expression
+                    |> List.fold (fun acc (parameter, unifiedArg) ->
+                        unifyExpression acc (changeVariable parameter unifiedArg)) expression
                 (newExpr, unifiedArgs)
                 |> Some)
 
