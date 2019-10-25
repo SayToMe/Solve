@@ -134,8 +134,14 @@ module ParsedListTests =
         
     let insertMemberRule terminal =
         terminal
+// This would fail because of greedy terminal algorithm
 //        |-> "member(E, L) :- head(E, L)."
 //        |-> "member(E, L) :- tail(T, L), member(E, T)."
+          |-> "member(El, [H|T]) :- member_1(T, El, H)."
+// This would fail because different call expressions do not recognize cut right now
+//          |-> "member_1(X, El, El):-!."
+//          |-> "member_1([H|T], El, Y) :- member_1(T, El, H)."
+          |-> "member_1(L, El, Y) :- El = Y, ! ; head(H, L), tail(H, T), member_1(T, El, H)."
         
     [<Test>]
     let ``Given `head` solve with head(X, []) should return false``() =
@@ -207,6 +213,16 @@ module ParsedListTests =
         |> expectedResult [[]]
         |> ignore
         
+    [<Test>]
+    let ``Given `member` solve with member(2, [2]) should return true``() =
+        TestTerminal()
+        |> insertHeadRule
+        |> insertTailRule
+        |> insertMemberRule
+        |?> "member(2, [2])."
+        |> expectedResult [[]]
+        |> ignore
+
     [<Test>]
     let ``Given `member` solve with member(2, [1, 2]) should return true``() =
         TestTerminal()

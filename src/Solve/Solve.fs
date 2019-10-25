@@ -25,7 +25,7 @@ module Solve =
                 let (GoalSignature(_, initialArgs)) = goal
                 let (Rule(Signature(_, parameters), body)) = Option.get (unifyRule rule initialArgs)
                 
-                let initialConreceteVariables =
+                let initialConcreteVariables =
                     (fromArgs initialArgs, fromParams parameters)
                     ||> List.map2 (fun argument parameter ->
                         let rec getConcreteVars argument parameter =
@@ -42,7 +42,7 @@ module Solve =
                             | _ -> []
                         getConcreteVars argument parameter
                     ) |> List.collect id
-                let initialUnconcreteVariables =
+                let initialNotConcreteVariables =
                     (fromArgs initialArgs, fromParams parameters)
                     ||> List.map2 (fun argument parameter ->
                         match argument, parameter with
@@ -53,11 +53,11 @@ module Solve =
 
                 exExpr body executeCustom VariableTerm
                 |> Seq.map (List.map (fun (changedVar, resTerm) ->
-                    match initialUnconcreteVariables |> List.tryFind (fun (_, parameter) -> parameter = changedVar) with
+                    match initialNotConcreteVariables |> List.tryFind (fun (_, parameter) -> parameter = changedVar) with
                     | Some (initialVar, _) -> Some(initialVar, resTerm)
                     | _ -> None
                 ) >> List.collect (Option.toList))
-                |> Seq.map (List.append initialConreceteVariables)
+                |> Seq.map (List.append initialConcreteVariables)
                 |> Seq.map (List.filter (fun variableTermPair -> 
                     match variableTermPair with
                     | (leftTerm, VariableTerm(rightVariableTerm)) when leftTerm = rightVariableTerm -> false
