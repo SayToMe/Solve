@@ -1,13 +1,26 @@
+image:
+  - Visual Studio 2019
+  - Ubuntu
 init:
   - git config --global core.autocrlf input
-  - choco install codecov
+install:
+  - dotnet tool restore
+version: 0.0.1.{build}
 build_script:
+  - sh: ./build.sh
   - cmd: build.cmd
 after_build:
-  - codecov -f "tests/Solve.Tests/coverage.opencover.xml"
-image: Visual Studio 2017
+  - sh: bash <(curl -s https://codecov.io/bash)
+  - cmd: bash <(curl -s https://codecov.io/bash)
+on_failure:
+  - appveyor PushArtifact FAKE.svclog
 test: off
-version: 0.0.1.{build}
 artifacts:
   - path: bin
     name: bin
+  - path: 'nuget\dotnetcore\*.nupkg'
+    type: NuGetPackage
+  - path: 'nuget\legacy\*.nupkg'
+    type: NuGetPackage
+  - path: 'nuget\dotnetcore\Fake.netcore\*.zip'
+    type: Zip

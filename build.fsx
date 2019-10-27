@@ -39,7 +39,7 @@ let summary = "Prolog F# implementation"
 let description = "Library for Prolog emulation"
 
 // List of author names (for NuGet package)
-let authors = [ "saytome" ]
+let authors = [ "qrtic" ]
 
 // Tags for your project (for NuGet package)
 let tags = "prolog"
@@ -54,7 +54,7 @@ let configuration = "Release"
 let testAssembly = "tests/Solve.Tests"
 
 // Default test framework
-let testFramework = "netcoreapp2.0"
+let testFramework = "netcoreapp3.0"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -147,18 +147,12 @@ Target.create "Restore" (fun _ ->
 // Build library & test project
 
 Target.create "Build" (fun _ ->
-    let setParams (defaults:MSBuildParams) =
-        { defaults with
-            Verbosity = Some(Quiet)
-            Targets = ["Build"]
-            Properties =
-                [
-                    "Optimize", "True"
-                    "DebugSymbols", "True"
-                    "Configuration", configuration
-                ]
-         }
-    MSBuild.build setParams solutionFile
+    solutionFile
+    |> DotNet.build (fun c ->
+        { c with
+            Configuration = DotNet.BuildConfiguration.Custom(configuration)
+        }
+    )
 )
 
 // --------------------------------------------------------------------------------------
