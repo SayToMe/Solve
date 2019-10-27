@@ -6,12 +6,12 @@
     <Title>Solve</Title>
     <Description>Solve is a prolog port to .NET.</Description>
     <PackageTags>f#, fsharp, prolog</PackageTags>
-    <PackageProjectUrl>https://github.com/SayToMe/Solve</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/SayToMe/Solve/blob/master/LICENSE.md</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/Qrtic/Solve</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/Qrtic/Solve/blob/master/LICENSE.md</PackageLicenseUrl>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <RepositoryType>git</RepositoryType>
-    <Authors>SayToMe</Authors>
-    <RepositoryUrl>https://github.com/SayToMe/Solve</RepositoryUrl>
+    <Authors>Qrtic</Authors>
+    <RepositoryUrl>https://github.com/Qrtic/Solve</RepositoryUrl>
     <DocumentationFile>.\bin\$(Configuration)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">

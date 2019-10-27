@@ -2,19 +2,19 @@ type project
 title
     Solve
 owners
-    saytome
+    Qrtic
 authors 
-    saytome
+    Qrtic
 projectUrl
-    https://github.com/saytome/Solve
+    https://github.com/Qrtic/Solve
 iconUrl
-    https://raw.githubusercontent.com/saytome/Solve/master/docs/files/img/logo.png
+    https://raw.githubusercontent.com/Qrtic/Solve/master/docs/files/img/logo.png
 licenseUrl
-    https://github.com/saytome/Solve/blob/master/LICENSE.txt
+    https://github.com/Qrtic/Solve/blob/master/LICENSE.txt
 requireLicenseAcceptance
     false
 copyright
-    Copyright 2015
+    Copyright 2019
 tags
     prolog
 summary

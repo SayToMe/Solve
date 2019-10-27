@@ -13,12 +13,12 @@ let referenceBinaries = []
 // Web site location for the generated documentation
 let website = "/Solve"
 
-let githubLink = "https://github.com/saytome/Solve"
+let githubLink = "https://github.com/Qrtic/Solve"
 
 // Specify more information about your project
 let info =
   [ "project-name", "Solve"
-    "project-author", "saytome"
+    "project-author", "Qrtic"
     "project-summary", "Prolog F# implementation"
     "project-github", githubLink
     "project-nuget", "http://nuget.org/packages/Solve" ]

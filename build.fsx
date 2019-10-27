@@ -58,14 +58,14 @@ let testFramework = "netcoreapp3.0"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
-let gitOwner = "saytome"
+let gitOwner = "Qrtic"
 let gitHome = sprintf "%s/%s" "https://github.com" gitOwner
 
 // The name of the project on GitHub
 let gitName = "Solve"
 
 // The url for the raw files hosted
-let gitRaw = Environment.environVarOrDefault "gitRaw" "https://raw.githubusercontent.com/saytome"
+let gitRaw = Environment.environVarOrDefault "gitRaw" "https://raw.githubusercontent.com/Qrtic"
 
 // --------------------------------------------------------------------------------------
 // END TODO: The rest of the file includes standard build steps
@@ -221,7 +221,7 @@ let formatting = __SOURCE_DIRECTORY__ @@ "packages/formatting/FSharp.Formatting"
 let docTemplate = "docpage.cshtml"
 
 let github_release_user = Environment.environVarOrDefault "github_release_user" gitOwner
-let githubLink = "https://github.com/saytome/solve"
+let githubLink = "https://github.com/Qrtic/solve"
 
 // Specify more information about your project
 let info =
