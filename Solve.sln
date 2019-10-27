@@ -22,7 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docsrc\content\tutorial.fsx = docsrc\content\tutorial.fsx
 	EndProjectSection
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve", "src\Solve\Solve.fsproj", "{7E47D76B-5C67-4FF6-8D89-8B959AEB428D}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve", "src\Solve\Solve.fsproj", "{7E47D76B-5C67-4FF6-8D89-8B959AEB428D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60BC93-E09B-4E5F-9D85-95A519479D54}"
 	ProjectSection(SolutionItems) = preProject
@@ -33,19 +33,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{BF60
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.Tests", "tests\Solve.Tests\Solve.Tests.fsproj", "{312C2CC4-7E30-48E7-820E-F00BBB7D8B2B}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.Tests", "tests\Solve.Tests\Solve.Tests.fsproj", "{312C2CC4-7E30-48E7-820E-F00BBB7D8B2B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{DD1C30FE-4364-4D0C-A425-506DC69AFECF}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.Console", "examples\Solve.Console\Solve.Console.fsproj", "{A3BB74C4-B10B-4866-8DF3-11233F298795}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.Console", "examples\Solve.Console\Solve.Console.fsproj", "{A3BB74C4-B10B-4866-8DF3-11233F298795}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.PrologParser", "src\Solve.PrologParser\Solve.PrologParser.fsproj", "{39863437-1B0A-46C8-8E8D-103AB5CBC900}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.PrologParser", "src\Solve.PrologParser\Solve.PrologParser.fsproj", "{39863437-1B0A-46C8-8E8D-103AB5CBC900}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "services", "services", "{38DC74F4-EC02-4E64-A337-246970C9A5EC}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.WebApi", "services\Solve.WebApi\Solve.WebApi.fsproj", "{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.WebApi", "services\Solve.WebApi\Solve.WebApi.fsproj", "{3E88DF77-1127-4AAD-9B93-B52A3E1DE829}"
 EndProject
-Project("{f2a71f9b-5d33-465a-a702-920d77279786}") = "Solve.Terminal", "src\Solve.Terminal\Solve.Terminal.fsproj", "{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Solve.Terminal", "src\Solve.Terminal\Solve.Terminal.fsproj", "{962DBBC7-4BD6-4B6C-ACF2-8D97B6895860}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,19 +1,10 @@
 ﻿namespace Solve.WebApi.Controllers
 
 open System
-open System.Collections.Generic
-open System.Linq
-open System.Threading.Tasks
 open Microsoft.AspNetCore.Mvc
-
-open Solve.Rule
-open Solve.Rule.Transformers
-open Solve.TermTypes.Transformers
-open Solve.Terminal
-
-open Microsoft.Extensions.Caching.Distributed
-open Microsoft.Extensions.Caching.Redis
 open Microsoft.Extensions.Caching.Memory
+
+open Solve.Terminal
 
 type WebTerminal() as self =
     let kb = MutableKnowledgebase([])

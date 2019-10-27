@@ -23,10 +23,10 @@ type Startup private () =
                 options.RespectBrowserAcceptHeader <- true
             )
             .AddFormatterMappings()
-            .AddJsonFormatters()
+            .AddJsonOptions(fun v -> v |> ignore)
         |> ignore
 
-    member this.Configure(app: IApplicationBuilder, env: IHostingEnvironment) =
+    member this.Configure(app: IApplicationBuilder, env: IWebHostEnvironment) =
         app.UseMvc() |> ignore
 
     member val Configuration : IConfiguration = null with get, set
